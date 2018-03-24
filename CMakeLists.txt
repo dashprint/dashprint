@@ -11,7 +11,7 @@ endif (NOT UDEV_FOUND)
 
 include_directories(${UDEV_INCLUDE_DIR})
 
-find_package(Boost 1.65.0 REQUIRED system)
+find_package(Boost 1.55.0 REQUIRED system)
 
 set(pi3print_sources
 	src/main.cpp

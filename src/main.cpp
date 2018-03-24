@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstring>
+#include <exception>
 #include "PrinterDiscovery.h"
 
 static void discoverPrinters();
@@ -10,7 +11,7 @@ int main(int argc, const char** argv)
 	{
 		if (argc > 1)
 		{
-			if (::strcmp(argv[1], "--discover") == 0)
+			if (std::strcmp(argv[1], "--discover") == 0)
 			{
 				discoverPrinters();
 				return 0;

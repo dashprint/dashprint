@@ -14,6 +14,7 @@
 #include "PrinterDiscovery.h"
 #include <stdexcept>
 #include <sstream>
+#include <cstring>
 
 PrinterDiscovery::PrinterDiscovery()
 {
@@ -74,11 +75,11 @@ void PrinterDiscovery::enumerate(std::vector<DiscoveredPrinter>& out)
 			
 			str = ::udev_device_get_property_value(device, "ID_MODEL_ENC");
 			if (str != nullptr)
-				dp.deviceName = str;
+				dp.deviceName = unescape(str);
 			
 			str = ::udev_device_get_property_value(device, "ID_VENDOR_ENC");
 			if (str != nullptr)
-				dp.deviceVendor = str;
+				dp.deviceVendor = unescape(str);
 			
 			str = ::udev_device_get_property_value(device, "ID_SERIAL");
 			if (str != nullptr)
@@ -97,4 +98,44 @@ void PrinterDiscovery::enumerate(std::vector<DiscoveredPrinter>& out)
 		
 		throw;
 	}
+}
+
+static inline unsigned char hexval(unsigned char c)
+{
+    if ('0' <= c && c <= '9')
+        return c - '0';
+    else if ('a' <= c && c <= 'f')
+        return c - 'a' + 10;
+    else if ('A' <= c && c <= 'F')
+        return c - 'A' + 10;
+    else
+		return 0;
+}
+
+std::string PrinterDiscovery::unescape(const char* string)
+{
+	std::stringstream ss;	
+	const size_t len = std::strlen(string);
+	
+	for (size_t i = 0; i < len; i++)
+	{
+		if (string[i] == '\\')
+		{
+			if (i+3 < len && string[i+1] == 'x')
+			{
+				char c;
+				c = hexval(string[i+2]) << 4;
+				c |= hexval(string[i+3]);
+				ss << c;
+				
+				i += 3;
+			}
+			else
+				break;
+		}
+		else
+			ss << string[i];
+	}
+	
+	return ss.str();
 }

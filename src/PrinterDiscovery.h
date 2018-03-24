@@ -32,6 +32,7 @@ public:
 	void enumerate(std::vector<DiscoveredPrinter>& out);
 private:
 	static std::string chooseDeviceLink(const char* devlinks);
+	static std::string unescape(const char* string);
 private:
 	struct udev* m_udev;
 };
