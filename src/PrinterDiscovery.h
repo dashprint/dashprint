@@ -8,12 +8,11 @@
  * File:   PrinterDiscovery.h
  * Author: lubos
  *
- * Created on 24. března 2018, 22:57
+ * Created on 24. března 2018, 23:55
  */
 
 #ifndef PRINTERDISCOVERY_H
 #define PRINTERDISCOVERY_H
-#include <libudev.h>
 #include <string>
 #include <vector>
 
@@ -26,16 +25,12 @@ struct DiscoveredPrinter
 class PrinterDiscovery
 {
 public:
-	PrinterDiscovery();
-	~PrinterDiscovery();
+	virtual ~PrinterDiscovery() {}
+	virtual void enumerate(std::vector<DiscoveredPrinter>& out) = 0;
 	
-	void enumerate(std::vector<DiscoveredPrinter>& out);
-private:
-	static std::string chooseDeviceLink(const char* devlinks);
-	static std::string unescape(const char* string);
-private:
-	struct udev* m_udev;
+	static void enumerateAll(std::vector<DiscoveredPrinter>& out);
 };
+
 
 #endif /* PRINTERDISCOVERY_H */
 
