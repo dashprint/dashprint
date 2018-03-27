@@ -33,19 +33,19 @@ private:
 	void doClose();
 	void handleRequest();
 	
-	template<bool isRequest, class Body, class Fields> void send(boost::beast::http::message<isRequest, Body, Fields>&& response);
-	
-	static boost::beast::string_view mime_type(boost::beast::string_view path);
-	
 	void handleRESTCall();
-	
-	// REST API handlers
+	static boost::beast::string_view mime_type(boost::beast::string_view path);
+protected:
+	template<bool isRequest, class Body, class Fields> void send(boost::beast::http::message<isRequest, Body, Fields>&& response);
 private:
 	WebServer* m_server;
 	boost::asio::ip::tcp::socket m_socket;
 	boost::beast::http::request<boost::beast::http::string_body> m_request;
 	boost::beast::flat_buffer m_buffer;
 	boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
+	
+	friend class WebRESTHandler;
+	friend class WebRESTContext;
 };
 
 extern template void WebSession::send(boost::beast::http::response<boost::beast::http::empty_body>&& response);

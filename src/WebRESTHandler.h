@@ -18,6 +18,7 @@
 #include <vector>
 
 class WebSession;
+class WebRESTContext;
 
 class WebRESTHandler
 {
@@ -29,11 +30,10 @@ public:
 	typedef boost::beast::http::request<boost::beast::http::string_body> reqtype_t;
 	bool call(const std::string& url, const reqtype_t& req, WebSession* session);
 private:
-	
-	void restPrintersDiscover(const reqtype_t& req, WebSession* session);
-	void restPrinters(const reqtype_t& req, WebSession* session);
+	void restPrintersDiscover(WebRESTContext& context);
+	void restPrinters(WebRESTContext& context);
 private:
-	typedef void (WebRESTHandler::*handler_t)(const reqtype_t& req, WebSession* session);
+	typedef void (WebRESTHandler::*handler_t)(WebRESTContext& context);
 	
 	struct HandlerMapping
 	{
