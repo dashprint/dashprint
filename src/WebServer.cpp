@@ -57,7 +57,7 @@ void WebServer::connectionAccepted(boost::system::error_code ec)
 	}
 	
 	// Handle the connection
-	std::make_shared<WebSession>(std::move(m_socket))->run();
+	std::make_shared<WebSession>(this, std::move(m_socket))->run();
 	
 	doAccept();
 }

@@ -15,6 +15,8 @@
 #define WEBSERVER_H
 #include <boost/asio.hpp>
 
+class WebSession;
+
 class WebServer {
 public:
 	WebServer(boost::asio::io_service& io);

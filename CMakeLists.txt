@@ -31,6 +31,7 @@ set(pi3print_sources
     src/StaticPrinterDiscovery.cpp
     src/WebServer.cpp
     src/WebSession.cpp
+    src/WebRESTHandler.cpp
 )
 
 # Compile Boost.Filesystem
@@ -60,5 +61,5 @@ include_directories("${CMAKE_BINARY_DIR}")
 add_executable(pi3print ${pi3print_sources})
 target_link_libraries(pi3print ${Boost_LIBRARIES} ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/src/web" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pi3print/")
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/web/dist/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pi3print/web")
 install(TARGETS pi3print DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")

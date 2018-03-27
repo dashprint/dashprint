@@ -16,11 +16,14 @@
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
 #include <memory>
+#include <stdexcept>
+
+class WebServer;
 
 class WebSession : public std::enable_shared_from_this<WebSession>
 {
 public:
-	WebSession(boost::asio::ip::tcp::socket socket);
+	WebSession(WebServer* ws, boost::asio::ip::tcp::socket socket);
 	~WebSession();
 	
 	void run();
@@ -33,12 +36,28 @@ private:
 	template<bool isRequest, class Body, class Fields> void send(boost::beast::http::message<isRequest, Body, Fields>&& response);
 	
 	static boost::beast::string_view mime_type(boost::beast::string_view path);
+	
+	void handleRESTCall();
+	
+	// REST API handlers
 private:
+	WebServer* m_server;
 	boost::asio::ip::tcp::socket m_socket;
 	boost::beast::http::request<boost::beast::http::string_body> m_request;
 	boost::beast::flat_buffer m_buffer;
 	boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
 };
+
+extern template void WebSession::send(boost::beast::http::response<boost::beast::http::empty_body>&& response);
+extern template void WebSession::send(boost::beast::http::response<boost::beast::http::string_body>&& response);
+
+#define DECLARE_EXCEPTION_TYPE(name) class name : public std::runtime_error { using std::runtime_error::runtime_error; }
+
+namespace WebErrors
+{
+	DECLARE_EXCEPTION_TYPE(not_found);
+	DECLARE_EXCEPTION_TYPE(bad_request);
+}
 
 #endif /* WEBSESSION_H */
 

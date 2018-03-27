@@ -12,12 +12,14 @@
  */
 
 #include "WebSession.h"
+#include "WebServer.h"
 #include "pi3print_config.h"
+#include "WebRESTHandler.h"
 
 using namespace std::placeholders;
 
-WebSession::WebSession(boost::asio::ip::tcp::socket socket)
-: m_socket(std::move(socket)), m_strand(m_socket.get_executor())
+WebSession::WebSession(WebServer* ws, boost::asio::ip::tcp::socket socket)
+: m_server(ws), m_socket(std::move(socket)), m_strand(m_socket.get_executor())
 {
 }
 
@@ -79,7 +81,7 @@ static std::string path_cat(boost::beast::string_view base, boost::beast::string
     return result;
 }
 
-// A lot of the following code has been taken from
+// A lot of the following code was taken from
 // http://www.boost.org/doc/libs/master/libs/beast/example/http/server/async/http_server_async.cpp
 
 
@@ -98,6 +100,9 @@ void WebSession::send(boost::beast::http::message<isRequest, Body, Fields>&& res
 				doRead();
 			}));
 }
+
+template void WebSession::send(boost::beast::http::response<boost::beast::http::empty_body>&& response);
+template void WebSession::send(boost::beast::http::response<boost::beast::http::string_body>&& response);
 
 
 void WebSession::handleRequest()
@@ -143,8 +148,11 @@ void WebSession::handleRequest()
 
     // Make sure we can handle the method
     if( m_request.method() != boost::beast::http::verb::get &&
-        m_request.method() != boost::beast::http::verb::head)
+        m_request.method() != boost::beast::http::verb::head &&
+		m_request.method() != boost::beast::http::verb::post)
+	{
         return send(bad_request("Unknown HTTP-method"));
+	}
 
     // Request path must be absolute and not contain "..".
     if( m_request.target().empty() ||
@@ -154,9 +162,34 @@ void WebSession::handleRequest()
         return send(bad_request("Illegal request-target"));
 	}
 	
+	// REST API call handling
+	if (m_request.target().starts_with("/api/"))
+	{
+		try
+		{
+			return handleRESTCall();
+		}
+		catch (const WebErrors::not_found& e)
+		{
+			return send(not_found(e.what()));
+		}
+		catch (const WebErrors::bad_request& e)
+		{
+			return send(bad_request(e.what()));
+		}
+		catch (const std::exception& e)
+		{
+			return send(server_error(e.what()));
+		}
+	}
+	
+	// Static file handling
+	if (m_request.method() == boost::beast::http::verb::post)
+        return send(bad_request("Unknown HTTP-method"));
+	
 	std::string path = path_cat(WEBROOT, m_request.target());
-    if(m_request.target().back() == '/')
-        path.append("index.xhtml");
+    if (m_request.target().back() == '/')
+        path.append("index.html");
 	
 	boost::beast::error_code ec;
     boost::beast::http::file_body::value_type body;
@@ -198,8 +231,7 @@ void WebSession::handleRequest()
     send(std::move(res));
 }
 
-boost::beast::string_view
-WebSession::mime_type(boost::beast::string_view path)
+boost::beast::string_view WebSession::mime_type(boost::beast::string_view path)
 {
     using boost::beast::iequals;
     auto const ext = [&path]
@@ -225,4 +257,14 @@ WebSession::mime_type(boost::beast::string_view path)
     if(iequals(ext, ".svg"))  return "image/svg+xml";
     if(iequals(ext, ".svgz")) return "image/svg+xml";
     return "application/text";
+}
+
+void WebSession::handleRESTCall()
+{
+	// Remove "/api"
+	std::string resource = m_request.target().substr(4).to_string();
+	
+	// Route the request
+	if (!WebRESTHandler::instance().call(resource, m_request, this))
+		throw WebErrors::not_found(m_request.target().to_string());
 }
