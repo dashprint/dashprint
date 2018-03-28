@@ -12,10 +12,10 @@
  */
 
 #include "WebRESTHandler.h"
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include <sstream>
 #include "WebSession.h"
+#include "nlohmann/json.hpp"
+#include "PrinterDiscovery.h"
 
 class WebRESTContext
 {
@@ -29,10 +29,13 @@ public:
 	
 	void send(http_status status);
 	void send(const std::string& text, const char* contentType, http_status status = http_status::ok);
-	void send(const boost::property_tree::ptree& json, http_status status = http_status::ok);
+	void send(const nlohmann::json& json, http_status status = http_status::ok);
+	
+	std::smatch& match() { return m_match; }
 private:
 	const WebRESTHandler::reqtype_t& m_request;
 	WebSession* m_session;
+	std::smatch m_match;
 };
 
 WebRESTHandler::WebRESTHandler()
@@ -53,22 +56,39 @@ WebRESTHandler& WebRESTHandler::instance()
 
 bool WebRESTHandler::call(const std::string& url, const reqtype_t& req, WebSession* session)
 {
+	WebRESTContext context(req, session);
+	
 	decltype(m_restHandlers)::iterator it = std::find_if(m_restHandlers.begin(), m_restHandlers.end(), [&](const HandlerMapping& handler) {
-		std::smatch match;
-		return req.method() == handler.method && std::regex_match(url, match, handler.regex);
+		return req.method() == handler.method && std::regex_match(url, context.match(), handler.regex);
 	});
 	
 	if (it == m_restHandlers.end())
 		return false;
 	
-	WebRESTContext context(req, session);
 	(this->*(it->handler))(context);
 	return true;
 }
 
 void WebRESTHandler::restPrintersDiscover(WebRESTContext& context)
 {
+	std::vector<DiscoveredPrinter> printers;
+	nlohmann::json result = {
+		{ "devices", nlohmann::json::array() }
+	};
 	
+	PrinterDiscovery::enumerateAll(printers);
+	
+	for (const DiscoveredPrinter& p : printers)
+	{
+		result["devices"].push_back({
+			{ "path", p.devicePath },
+			{ "name", p.deviceName },
+			{ "vendor", p.deviceVendor },
+			{ "serial", p.deviceSerial }
+		});
+	}
+	
+	context.send(result);
 }
 
 void WebRESTHandler::restPrinters(WebRESTContext& context)
@@ -102,9 +122,7 @@ void WebRESTContext::send(const std::string& text, const char* contentType, http
 	m_session->send(std::move(res));
 }
 
-void WebRESTContext::send(const boost::property_tree::ptree& json, http_status status)
+void WebRESTContext::send(const nlohmann::json& json, http_status status)
 {
-	std::stringstream ss;
-	boost::property_tree::write_json(ss, json);
-	send(ss.str(), "application/json", status);
+	send(json.dump(), "application/json", status);
 }

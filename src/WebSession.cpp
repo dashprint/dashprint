@@ -47,10 +47,8 @@ void WebSession::onRead(boost::system::error_code ec, std::size_t bytesTransferr
 	
 	if(ec == boost::beast::http::error::end_of_stream)
 		doClose();
-	else if (ec)
-		return;
-	
-	handleRequest();
+	else if (!ec)
+		handleRequest();
 }
 
 void WebSession::doClose()
