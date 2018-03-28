@@ -45,11 +45,28 @@ set(pi3print_sources ${pi3print_sources}
     src/boost/libs/filesystem/src/utf8_codecvt_facet.cpp
 )
 
-include_directories(
-    ${CMAKE_SOURCE_DIR}/src/boost/libs/asio/include
-    ${CMAKE_SOURCE_DIR}/src/boost/libs/beast/include
-    ${CMAKE_SOURCE_DIR}/src/boost/libs/property_tree/include
-)
+FILE(GLOB children ${CMAKE_SOURCE_DIR}/src/boost/libs/*)
+FOREACH(child ${children})
+	IF(IS_DIRECTORY ${child})
+		include_directories(${child}/include)
+	ENDIF()
+ENDFOREACH()
+
+#include_directories(
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/asio/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/beast/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/property_tree/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/system/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/core/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/config/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/utility/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/type_traits/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/smart_ptr/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/endian/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/iterator/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/detail/include
+#    ${CMAKE_SOURCE_DIR}/src/boost/libs/multi_index/include
+#)
 
 if (WITH_UDEV)
     set(pi3print_sources ${pi3print_sources} src/UdevPrinterDiscovery.cpp)
