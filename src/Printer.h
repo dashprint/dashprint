@@ -21,6 +21,7 @@
 #include <queue>
 #include <functional>
 #include <boost/signals2.hpp>
+#include <mutex>
 
 class Printer
 {
@@ -69,6 +70,13 @@ public:
 	void sendCommand(const char* cmd, CommandCallback cb);
 
 	boost::signals2::connection connectStateChange(std::function<void(Printer::State newState)> cb) { return m_stateChangeSignal.connect(cb); }
+
+	struct Temperature
+	{
+		float current;
+		float target;
+	};
+	std::map<std::string, Temperature> getTemperatures() const;
 private:
 	void setState(State state);
 
@@ -86,6 +94,8 @@ private:
 
 	// Parse 'key:some value' pairs
 	static void kvParse(const std::string& line, std::map<std::string,std::string>& values);
+
+	void getTemperature();
 private:
 	std::string m_uniqueName; // As used in REST API URLs
 	std::string m_devicePath, m_name;
@@ -93,7 +103,7 @@ private:
 	State m_state = State::Stopped;
 	boost::asio::io_service& m_io;
 	boost::asio::serial_port m_serial;
-	boost::asio::deadline_timer m_reconnectTimer, m_timeoutTimer;
+	boost::asio::deadline_timer m_reconnectTimer, m_timeoutTimer, m_temperatureTimer;
 
 	struct PendingCommand
 	{
@@ -112,6 +122,8 @@ private:
 	std::map<std::string, std::string> m_baseParameters;
 
 	std::string m_apiKey;
+	std::map<std::string, Temperature> m_temperatures;
+	mutable std::mutex m_temperaturesMutex;
 };
 
 #endif /* PRINTER_H */

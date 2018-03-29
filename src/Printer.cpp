@@ -27,7 +27,7 @@
 static const boost::posix_time::seconds RECONNECT_DELAY(5);
 
 Printer::Printer(boost::asio::io_service &io)
-		: m_io(io), m_serial(io), m_reconnectTimer(io), m_timeoutTimer(io)
+		: m_io(io), m_serial(io), m_reconnectTimer(io), m_timeoutTimer(io), m_temperatureTimer(io)
 {
 	regenerateApiKey();
 }
@@ -123,6 +123,42 @@ void Printer::reset()
 	m_executingCommand = false;
 }
 
+void Printer::getTemperature()
+{
+	if (m_state != State::Connected)
+		return;
+
+	sendCommand("M105", [=](const std::vector<std::string>& response) {
+		if (!response.empty())
+		{
+			std::map<std::string, std::string> values;
+			kvParse(response[response.size()-1], values);
+
+			for (auto it : values)
+			{
+				Temperature temp;
+				ssize_t slash;
+
+				slash = it.second.find('/');
+				temp.current = std::stof(it.second);
+
+				if (slash != std::string::npos)
+					temp.target = std::stof(it.second.substr(slash+1));
+
+				m_temperaturesMutex.lock();
+				m_temperatures.emplace(it.first, temp);
+				m_temperaturesMutex.unlock();
+			}
+		}
+
+		m_temperatureTimer.expires_from_now(boost::posix_time::seconds(5));
+		m_temperatureTimer.async_wait([=](const boost::system::error_code& ec) {
+			if (!ec)
+				getTemperature();
+		});
+	});
+}
+
 void Printer::setState(State state)
 {
 	if (state != m_state)
@@ -172,7 +208,10 @@ void Printer::doConnect()
 				kvParse(reply[reply.size() - 2], m_baseParameters);
 
 			if (!reply.empty())
+			{
 				setState(State::Connected);
+				getTemperature();
+			}
 		});
 
 		doWrite();
@@ -313,4 +352,10 @@ void Printer::regenerateApiKey()
 	boost::uuids::uuid u = gen();
 
 	m_apiKey = boost::uuids::to_string(u);
+}
+
+std::map<std::string, Printer::Temperature> Printer::getTemperatures() const
+{
+	std::unique_lock<std::mutex> lock(m_temperaturesMutex);
+	return m_temperatures;
 }
