@@ -93,15 +93,13 @@ bool WebRESTHandler::call(const std::string& url, const reqtype_t& req, WebSessi
 void WebRESTHandler::restPrintersDiscover(WebRESTContext& context)
 {
 	std::vector<DiscoveredPrinter> printers;
-	nlohmann::json result = {
-		{ "devices", nlohmann::json::array() }
-	};
+	nlohmann::json result = nlohmann::json::array();
 	
 	PrinterDiscovery::enumerateAll(printers);
 	
 	for (const DiscoveredPrinter& p : printers)
 	{
-		result["devices"].push_back({
+		result.push_back({
 			{ "path", p.devicePath },
 			{ "name", p.deviceName },
 			{ "vendor", p.deviceVendor },
@@ -128,14 +126,13 @@ void WebRESTHandler::restPrinter(WebRESTContext& context)
 			{"api_key",     printer->apiKey()},
 			{"name",        printer->name()},
 			{"default",     name == defaultPrinter},
+			{"connected",   printer->state() == Printer::State::Connected},
 	});
 }
 
 void WebRESTHandler::restPrinters(WebRESTContext& context)
 {
-	nlohmann::json result = {
-		{ "printers", {} }
-	};
+	nlohmann::json result = nlohmann::json::array();
 
 	std::set<std::string> names = context.printerManager()->printerNames();
 	std::string defaultPrinter = context.printerManager()->defaultPrinter();
@@ -147,13 +144,14 @@ void WebRESTHandler::restPrinters(WebRESTContext& context)
 		if (!printer)
 			continue;
 
-		result["printers"][name] = {
+		result[name] = {
 				{"device_path", printer->devicePath()},
 				{"baud_rate",   printer->baudRate()},
 				{"stopped",     printer->state() == Printer::State::Stopped},
 				{"api_key",     printer->apiKey()},
 				{"name",        printer->name()},
 				{"default",     name == defaultPrinter},
+				{"connected",   printer->state() == Printer::State::Connected},
 		};
 	}
 

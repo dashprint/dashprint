@@ -92,6 +92,9 @@ void PrinterManager::addPrinter(std::shared_ptr<Printer> printer)
 	}
 	
 	m_printers.insert(std::make_pair(printer->uniqueName(), printer));
+	if (m_defaultPrinter.empty())
+		m_defaultPrinter = printer->uniqueName();
+
 	save();
 }
 
@@ -102,6 +105,15 @@ void PrinterManager::deletePrinter(const char* name)
 	
 	if (it != m_printers.end())
 		m_printers.erase(it);
+
+	if (name == m_defaultPrinter)
+	{
+		if (!m_printers.empty())
+			m_defaultPrinter = m_printers.begin()->first;
+		else
+			m_defaultPrinter.clear();
+	}
+
 	save();
 }
 
