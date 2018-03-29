@@ -5,6 +5,7 @@
 #include "StaticPrinterDiscovery.h"
 #include <exception>
 #include <iostream>
+#include <boost/log/trivial.hpp>
 
 void PrinterDiscovery::enumerateAll(std::vector<DiscoveredPrinter>& out)
 {
@@ -17,7 +18,7 @@ void PrinterDiscovery::enumerateAll(std::vector<DiscoveredPrinter>& out)
 	}
 	catch (const std::exception& e)
 	{
-		std::cerr << "Error using udev: " << e.what() << std::endl;
+		BOOST_LOG_TRIVIAL(error) << "Error using udev: " << e.what();
 	}
 #endif
 	

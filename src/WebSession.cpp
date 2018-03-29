@@ -16,8 +16,6 @@
 #include "pi3print_config.h"
 #include "WebRESTHandler.h"
 
-using namespace std::placeholders;
-
 WebSession::WebSession(WebServer* ws, boost::asio::ip::tcp::socket socket)
 : m_server(ws), m_socket(std::move(socket)), m_strand(m_socket.get_executor())
 {
@@ -38,7 +36,7 @@ void WebSession::doRead()
 	m_request = {};
 	
 	boost::beast::http::async_read(m_socket, m_buffer, m_request,
-			boost::asio::bind_executor(m_strand, std::bind(&WebSession::onRead, shared_from_this(), _1, _2)));
+			boost::asio::bind_executor(m_strand, std::bind(&WebSession::onRead, shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
 }
 
 void WebSession::onRead(boost::system::error_code ec, std::size_t bytesTransferred)

@@ -7,7 +7,9 @@
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/filesystem.hpp>
 #include <cstdlib>
+#include <boost/log/trivial.hpp>
 #include "WebServer.h"
+#include "PrinterManager.h"
 
 static void discoverPrinters();
 static void runApp();
@@ -36,7 +38,7 @@ int main(int argc, const char** argv)
 	}
 	catch (const std::exception& e)
 	{
-		std::cerr << e.what() << std::endl;
+		BOOST_LOG_TRIVIAL(fatal) << e.what();
 		return 1;
 	}
 	
@@ -59,7 +61,8 @@ void discoverPrinters()
 void runApp()
 {
 	boost::asio::io_service io;
-	WebServer webServer(io);
+	PrinterManager printerManager(io, g_config);
+	WebServer webServer(io, printerManager);
 	
 	webServer.start(g_config.get<int>("WebServer.port", 8970));
 	
@@ -78,7 +81,7 @@ void loadConfig()
 	}
 	catch (const std::exception& e)
 	{
-		std::cerr << "Failed to load configuration: " << e.what() << std::endl;
+		BOOST_LOG_TRIVIAL(warning) << "Failed to load configuration: " << e.what();
 	}
 }
 

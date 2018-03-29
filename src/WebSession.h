@@ -27,6 +27,7 @@ public:
 	~WebSession();
 	
 	void run();
+	WebServer* webServer() { return m_server; }
 private:
 	void doRead();
 	void onRead(boost::system::error_code ec, std::size_t bytesTransferred);
@@ -57,6 +58,7 @@ namespace WebErrors
 {
 	DECLARE_EXCEPTION_TYPE(not_found);
 	DECLARE_EXCEPTION_TYPE(bad_request);
+	DECLARE_EXCEPTION_TYPE(not_acceptable);
 }
 
 #endif /* WEBSESSION_H */

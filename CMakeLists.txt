@@ -32,6 +32,8 @@ set(pi3print_sources
     src/WebServer.cpp
     src/WebSession.cpp
     src/WebRESTHandler.cpp
+    src/Printer.cpp
+    src/PrinterManager.cpp
 )
 
 # Compile Boost.Filesystem
@@ -45,28 +47,60 @@ set(pi3print_sources ${pi3print_sources}
     src/boost/libs/filesystem/src/utf8_codecvt_facet.cpp
 )
 
+# Compile Boost.Log
+include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/log/src)
+set(pi3print_sources ${pi3print_sources}
+    src/boost/libs/log/src/attribute_name.cpp
+    src/boost/libs/log/src/attribute_set.cpp
+    src/boost/libs/log/src/attribute_value_set.cpp
+    src/boost/libs/log/src/code_conversion.cpp
+    src/boost/libs/log/src/core.cpp
+    src/boost/libs/log/src/date_time_format_parser.cpp
+    src/boost/libs/log/src/default_attribute_names.cpp
+    src/boost/libs/log/src/default_sink.cpp
+    src/boost/libs/log/src/dump.cpp
+    src/boost/libs/log/src/event.cpp
+    src/boost/libs/log/src/exceptions.cpp
+    src/boost/libs/log/src/format_parser.cpp
+    src/boost/libs/log/src/global_logger_storage.cpp
+    src/boost/libs/log/src/named_scope.cpp
+    src/boost/libs/log/src/named_scope_format_parser.cpp
+    src/boost/libs/log/src/once_block.cpp
+    src/boost/libs/log/src/permissions.cpp
+    src/boost/libs/log/src/process_id.cpp
+    src/boost/libs/log/src/process_name.cpp
+    src/boost/libs/log/src/record_ostream.cpp
+    src/boost/libs/log/src/severity_level.cpp
+    src/boost/libs/log/src/spirit_encoding.cpp
+    src/boost/libs/log/src/syslog_backend.cpp
+    src/boost/libs/log/src/text_file_backend.cpp
+    src/boost/libs/log/src/text_multifile_backend.cpp
+    src/boost/libs/log/src/text_ostream_backend.cpp
+    src/boost/libs/log/src/thread_id.cpp
+    src/boost/libs/log/src/threadsafe_queue.cpp
+    src/boost/libs/log/src/thread_specific.cpp
+    src/boost/libs/log/src/timer.cpp
+    src/boost/libs/log/src/timestamp.cpp
+    src/boost/libs/log/src/trivial.cpp
+    src/boost/libs/log/src/unhandled_exception_count.cpp
+    src/boost/libs/log/src/posix/ipc_reliable_message_queue.cpp
+    src/boost/libs/log/src/posix/object_name.cpp
+)
+
+# Compile Boost.Thread
+set(pi3print_sources ${pi3print_sources}
+    src/boost/libs/thread/src/future.cpp
+    src/boost/libs/thread/src/pthread/thread.cpp
+    src/boost/libs/thread/src/pthread/once_atomic.cpp
+    src/boost/libs/thread/src/tss_null.cpp
+)
+
 FILE(GLOB children ${CMAKE_SOURCE_DIR}/src/boost/libs/*)
 FOREACH(child ${children})
 	IF(IS_DIRECTORY ${child})
 		include_directories(${child}/include)
 	ENDIF()
 ENDFOREACH()
-
-#include_directories(
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/asio/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/beast/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/property_tree/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/system/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/core/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/config/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/utility/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/type_traits/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/smart_ptr/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/endian/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/iterator/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/detail/include
-#    ${CMAKE_SOURCE_DIR}/src/boost/libs/multi_index/include
-#)
 
 if (WITH_UDEV)
     set(pi3print_sources ${pi3print_sources} src/UdevPrinterDiscovery.cpp)
@@ -77,6 +111,9 @@ include_directories("${CMAKE_BINARY_DIR}")
 
 add_executable(pi3print ${pi3print_sources})
 target_link_libraries(pi3print ${Boost_LIBRARIES} ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+if(UNIX AND NOT APPLE)
+    target_link_libraries(pi3print rt)
+endif()
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/web/dist/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pi3print/web")
 install(TARGETS pi3print DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")

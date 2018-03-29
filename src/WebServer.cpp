@@ -13,12 +13,12 @@
 
 #include "WebServer.h"
 #include <iostream>
+#include <boost/log/trivial.hpp>
 #include "WebSession.h"
 
-using namespace std::placeholders;
 
-WebServer::WebServer(boost::asio::io_service& io)
-: m_io(io), m_acceptor(io), m_socket(io)
+WebServer::WebServer(boost::asio::io_service& io, PrinterManager& printerManager)
+: m_io(io), m_printerManager(printerManager), m_acceptor(io), m_socket(io)
 {
 }
 
@@ -28,7 +28,7 @@ WebServer::~WebServer()
 
 void WebServer::start(int port)
 {
-	std::cout << "Starting web server on port " << port << std::endl;
+	BOOST_LOG_TRIVIAL(info) << "Starting web server on port " << port;
 	
 	boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v6(), port);
 	
@@ -45,14 +45,14 @@ void WebServer::start(int port)
 
 void WebServer::doAccept()
 {
-	m_acceptor.async_accept(m_socket, std::bind(&WebServer::connectionAccepted, this, _1));
+	m_acceptor.async_accept(m_socket, std::bind(&WebServer::connectionAccepted, this, std::placeholders::_1));
 }
 
 void WebServer::connectionAccepted(boost::system::error_code ec)
 {
 	if (ec)
 	{
-		std::cerr << "Error accepting a connection: " << ec << std::endl;
+		BOOST_LOG_TRIVIAL(error) << "Error accepting a connection: " << ec;
 		return;
 	}
 	
