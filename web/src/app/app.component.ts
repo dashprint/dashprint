@@ -1,8 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Printer } from './Printer';
 import { PrintService } from './print.service';
-import { BsModalService } from "ngx-bootstrap/modal";
-import { BsModalRef } from 'ngx-bootstrap/modal/bs-modal-ref.service';
 import { AddprinterComponent } from './addprinter/addprinter.component';
 
 @Component({
@@ -12,11 +10,10 @@ import { AddprinterComponent } from './addprinter/addprinter.component';
 })
 export class AppComponent implements OnInit {
   title = 'app';
-  bsModalRef: BsModalRef;
   printers: Printer[];
   selectedPrinter: Printer;
 
-  constructor(private printService: PrintService, private modalService: BsModalService) {
+  constructor(private printService: PrintService) {
 
   }
 
@@ -40,6 +37,6 @@ export class AppComponent implements OnInit {
   }
 
   addPrinter() {
-      this.bsModalRef = this.modalService.show(AddprinterComponent);
+
   }
 }

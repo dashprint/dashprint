@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import {PrintService} from "../print.service";
 import {DiscoveredPrinter} from "../Printer";
-import { BsModalRef } from 'ngx-bootstrap/modal/bs-modal-ref.service';
 
 @Component({
   selector: 'modal-content',
@@ -11,7 +10,7 @@ import { BsModalRef } from 'ngx-bootstrap/modal/bs-modal-ref.service';
 export class AddprinterComponent implements OnInit {
   discoveredPrinters: DiscoveredPrinter[];
 
-  constructor(private printService: PrintService, public bsModalRef: BsModalRef) { }
+  constructor(private printService: PrintService) { }
 
   ngOnInit() {
     this.discoverPrinters();

@@ -5,9 +5,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { AppComponent } from './app.component';
 import { PrintService } from './print.service';
 import { AddprinterComponent } from './addprinter/addprinter.component';
-
-import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
-import { ModalModule } from 'ngx-bootstrap/modal';
+import { ClarityModule } from "@clr/angular";
 
 @NgModule({
   declarations: [
@@ -17,8 +15,7 @@ import { ModalModule } from 'ngx-bootstrap/modal';
   imports: [
     BrowserModule,
     HttpClientModule,
-    BsDropdownModule.forRoot(),
-    ModalModule.forRoot(),
+    ClarityModule,
   ],
   providers: [PrintService],
   bootstrap: [AppComponent],
