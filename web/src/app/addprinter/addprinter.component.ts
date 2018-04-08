@@ -1,16 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import {PrintService} from "../print.service";
 import {DiscoveredPrinter} from "../Printer";
+import {Modal} from "../Modal";
 
 @Component({
-  selector: 'modal-content',
+  selector: 'modal-addprinter',
   templateUrl: './addprinter.component.html',
   styleUrls: ['./addprinter.component.css']
 })
-export class AddprinterComponent implements OnInit {
+export class AddprinterComponent extends Modal implements OnInit {
   discoveredPrinters: DiscoveredPrinter[];
 
-  constructor(private printService: PrintService) { }
+  constructor(private printService: PrintService) {
+      super();
+  }
 
   ngOnInit() {
     this.discoverPrinters();

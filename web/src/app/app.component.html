@@ -33,7 +33,14 @@
   </clr-header>
 
   <div class="content-container">
-    <main class="content-area">
+    <main *ngIf="printers && printers.length" class="content-area">
+    </main>
+    <main *ngIf="!printers || !printers.length" class="content-area no-printers">
+      <h2>No printers</h2>
+      <p><button type="button" class="btn btn-primary" (click)="addPrinter()">Add printer...</button></p>
     </main>
   </div>
 </clr-main-container>
+
+<ng-template #modals></ng-template>
+

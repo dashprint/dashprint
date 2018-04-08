@@ -4,8 +4,10 @@ import { HttpClientModule } from '@angular/common/http';
 
 import { AppComponent } from './app.component';
 import { PrintService } from './print.service';
+import { ModalService } from './modal.service';
 import { AddprinterComponent } from './addprinter/addprinter.component';
 import { ClarityModule } from "@clr/angular";
+import {BrowserAnimationsModule} from "@angular/platform-browser/animations";
 
 @NgModule({
   declarations: [
@@ -16,8 +18,9 @@ import { ClarityModule } from "@clr/angular";
     BrowserModule,
     HttpClientModule,
     ClarityModule,
+    BrowserAnimationsModule
   ],
-  providers: [PrintService],
+  providers: [PrintService, ModalService],
   bootstrap: [AppComponent],
   entryComponents: [
     AddprinterComponent,

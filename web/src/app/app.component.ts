@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewContainerRef, ViewChild } from '@angular/core';
 import { Printer } from './Printer';
 import { PrintService } from './print.service';
+import { ModalService } from './modal.service';
 import { AddprinterComponent } from './addprinter/addprinter.component';
 
 @Component({
@@ -13,13 +14,18 @@ export class AppComponent implements OnInit {
   printers: Printer[];
   selectedPrinter: Printer;
 
-  constructor(private printService: PrintService) {
+  @ViewChild('modals', {
+    read: ViewContainerRef
+  }) viewContainerRef: ViewContainerRef;
 
+  constructor(private printService: PrintService, private modalService: ModalService) {
   }
 
   ngOnInit() {
       // Get printer list
       this.updatePrinterList();
+
+      this.modalService.setRootViewContainerRef(this.viewContainerRef);
   }
 
   updatePrinterList() {
@@ -37,6 +43,7 @@ export class AppComponent implements OnInit {
   }
 
   addPrinter() {
-
+      // HOWTO: https://medium.com/front-end-hacking/dynamically-add-components-to-the-dom-with-angular-71b0cb535286
+      this.modalService.showModal(AddprinterComponent);
   }
 }
