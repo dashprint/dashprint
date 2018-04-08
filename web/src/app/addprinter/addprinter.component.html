@@ -1,10 +1,46 @@
-<clr-modal [(clrModalOpen)]="visible">
-  <h3 class="modal-title">I have a nice title</h3>
-  <div class="modal-body">
-    <p>But not much to say...</p>
-  </div>
-  <div class="modal-footer">
-    <button type="button" class="btn btn-outline" (click)="hide()">Cancel</button>
-    <button type="button" class="btn btn-primary" (click)="hide()">Ok</button>
-  </div>
-</clr-modal>
+<clr-wizard [(clrWizardOpen)]="visible" clrWizardSize="lg">
+  <clr-wizard-title>New Printer</clr-wizard-title>
+
+  <clr-wizard-button [type]="'cancel'">Cancel</clr-wizard-button>
+  <clr-wizard-button [type]="'previous'">Back</clr-wizard-button>
+  <clr-wizard-button [type]="'next'">Next</clr-wizard-button>
+  <clr-wizard-button [type]="'finish'">Finish</clr-wizard-button>
+
+  <clr-wizard-page [clrWizardPageNextDisabled]="!formPageOne.valid">
+    <ng-template clrPageTitle>Specify printer</ng-template>
+    <form [formGroup]="formPageOne">
+      <section class="form-block">
+        <div class="form-group">
+          <label class="required" for="discoveredPrinter">Serial device</label>
+
+          <div class="select">
+            <select id="discoveredPrinter" formControlName="selectedDevice" name="selectedDevice" (change)="onDeviceChanged()">
+              <option *ngFor="let printer of discoveredPrinters" [ngValue]="printer">{{ printer.name }}</option>
+              <!--<option value="custom">Custom device</option>-->
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="required" for="devicePath">Device path</label>
+          <input type="text" id="devicePath" formControlName="devicePath" [readonly]="!selectedDevice || selectedDevice.path != 'custom'"  name="devicePath" />
+        </div>
+
+        <div class="form-group">
+          <label class="required" for="baudRate">Baud rate</label>
+          <input type="number" id="baudRate" formControlName="baudRate"  name="baudRate" min="1200" required />
+        </div>
+
+        <div class="form-group">
+          <label class="required" for="printerName">Name</label>
+          <input type="text" id="printerName" formControlName="printerName" name="printerName" required/>
+        </div>
+      </section>
+    </form>
+  </clr-wizard-page>
+
+  <clr-wizard-page>
+    <ng-template clrPageTitle>Setup printer</ng-template>
+    <p>Test 2</p>
+  </clr-wizard-page>
+</clr-wizard>
