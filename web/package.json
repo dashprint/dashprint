@@ -27,6 +27,8 @@
     "@webcomponents/custom-elements": "^1.0.0",
     "bootstrap": "^4.0.0-beta.3",
     "core-js": "^2.4.1",
+    "gl-matrix-mat4": "^2.2.1-npm",
+    "gl-matrix-vec3": "^2.2.1-npm",
     "rxjs": "^5.5.6",
     "zone.js": "^0.8.19"
   },

@@ -23,24 +23,54 @@
 
         <div class="form-group">
           <label class="required" for="devicePath">Device path</label>
-          <input type="text" id="devicePath" formControlName="devicePath" [readonly]="!selectedDevice || selectedDevice.path != 'custom'"  name="devicePath" />
+          <input type="text" id="devicePath" formControlName="devicePath" [readonly]="!selectedDevice || selectedDevice.path != 'custom'"  name="devicePath" size="35" />
         </div>
 
         <div class="form-group">
           <label class="required" for="baudRate">Baud rate</label>
-          <input type="number" id="baudRate" formControlName="baudRate"  name="baudRate" min="1200" required />
+          <input type="number" id="baudRate" formControlName="baudRate"  name="baudRate" min="1200" />
         </div>
 
         <div class="form-group">
           <label class="required" for="printerName">Name</label>
-          <input type="text" id="printerName" formControlName="printerName" name="printerName" required/>
+          <input type="text" id="printerName" formControlName="printerName" name="printerName" size="35"/>
         </div>
       </section>
     </form>
   </clr-wizard-page>
 
-  <clr-wizard-page>
+  <clr-wizard-page [clrWizardPageNextDisabled]="!formPageTwo.valid" (clrWizardPageOnCommit)="onCreate()">
     <ng-template clrPageTitle>Setup printer</ng-template>
-    <p>Test 2</p>
+    <form [formGroup]="formPageTwo">
+      <section class="form-block">
+        <div class="form-group">
+          <label class="required" for="shape">Shape</label>
+          <select id="shape" name="shape" formControlName="shape">
+            <option value="rectangular">Rectangular</option>
+            <option value="cylindrical">Cylindrical</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="required" for="width">Width (X)</label>
+          <input type="number" id="width" formControlName="width" name="width" (change)="onDimensionsChanged()" /> mm
+        </div>
+
+        <div class="form-group">
+          <label class="required" for="depth">Depth (Y)</label>
+          <input type="number" id="depth" formControlName="depth" name="depth" (change)="onDimensionsChanged()" /> mm
+        </div>
+
+        <div class="form-group">
+          <label class="required" for="height">Height (Z)</label>
+          <input type="number" id="height" formControlName="height" name="height" (change)="onDimensionsChanged()" /> mm
+        </div>
+
+        <div id="printer-preview">
+          <canvas #printerPreview width="300" height="300">
+          </canvas>
+        </div>
+      </section>
+    </form>
   </clr-wizard-page>
 </clr-wizard>

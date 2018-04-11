@@ -1,8 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import {PrintService} from "../print.service";
 import {DiscoveredPrinter} from "../Printer";
 import {Modal} from "../Modal";
 import {FormControl, FormGroup, Validators, FormBuilder} from "@angular/forms";
+import {GLView} from "../webgl/GLView";
+import {PrinterView} from "../webgl/PrinterView";
+import {StlmodelService} from "../webgl/stlmodel.service";
 
 @Component({
   selector: 'modal-addprinter',
@@ -16,8 +19,12 @@ export class AddprinterComponent extends Modal implements OnInit {
   //baudRate: number = 115200;
   //printerName: string;
   formPageOne: FormGroup;
+  formPageTwo: FormGroup;
 
-  constructor(private printService: PrintService, fb: FormBuilder) {
+  @ViewChild('printerPreview') printerPreview: ElementRef;
+  printerView: PrinterView;
+
+  constructor(private printService: PrintService, private stlLoader: StlmodelService, fb: FormBuilder) {
       super();
 
       this.formPageOne = fb.group({
@@ -26,10 +33,26 @@ export class AddprinterComponent extends Modal implements OnInit {
           "baudRate":[115200, [Validators.required, Validators.min(1200)]],
           "printerName": ["", Validators.required]
       });
+
+      this.formPageTwo = fb.group({
+          "shape": "rectangular",
+          "height": [200, [Validators.required, Validators.min(10)]],
+          "width": [200, [Validators.required, Validators.min(10)]],
+          "depth": [200, [Validators.required, Validators.min(10)]]
+      });
   }
 
   ngOnInit() {
     this.discoverPrinters();
+  }
+
+  ngAfterViewInit() {
+      //try {
+          this.printerView = new PrinterView(this.printerPreview.nativeElement, this.stlLoader);
+          this.printerView.initialize();
+      //} catch (e) {
+      //    console.error("Cannot setup printer preview: " + e);
+      //}
   }
 
   discoverPrinters() {
@@ -53,6 +76,18 @@ export class AddprinterComponent extends Modal implements OnInit {
         this.formPageOne.get('printerName').setValue(selectedDevice.name);
         this.formPageOne.get('devicePath').setValue(selectedDevice.path);
     }
+  }
+
+  onDimensionsChanged() {
+      let x = this.formPageTwo.get('width').value;
+      let y = this.formPageTwo.get('depth').value;
+      let z = this.formPageTwo.get('height').value;
+      if (x > 0 && y > 0 && z > 0)
+        this.printerView.setDimensions(x, y, z);
+  }
+
+  onCreate() {
+      // TODO:
   }
 
 }

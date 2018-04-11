@@ -9,6 +9,7 @@ import { ModalService } from './modal.service';
 import { AddprinterComponent } from './addprinter/addprinter.component';
 import { ClarityModule } from "@clr/angular";
 import {BrowserAnimationsModule} from "@angular/platform-browser/animations";
+import {StlmodelService} from "./webgl/stlmodel.service";
 
 @NgModule({
   declarations: [
@@ -23,7 +24,7 @@ import {BrowserAnimationsModule} from "@angular/platform-browser/animations";
     FormsModule,
     ReactiveFormsModule
   ],
-  providers: [PrintService, ModalService],
+  providers: [PrintService, ModalService, StlmodelService],
   bootstrap: [AppComponent],
   entryComponents: [
     AddprinterComponent,
