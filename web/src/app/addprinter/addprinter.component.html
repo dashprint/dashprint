@@ -39,7 +39,7 @@
     </form>
   </clr-wizard-page>
 
-  <clr-wizard-page [clrWizardPageNextDisabled]="!formPageTwo.valid" (clrWizardPageOnCommit)="onCreate()">
+  <clr-wizard-page [clrWizardPageNextDisabled]="!formPageTwo.valid" (clrWizardPageOnCommit)="onCreate()" #finishPage>
     <ng-template clrPageTitle>Setup printer</ng-template>
     <form [formGroup]="formPageTwo">
       <section class="form-block">

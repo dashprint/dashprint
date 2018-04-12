@@ -18,6 +18,7 @@
 #include "nlohmann/json.hpp"
 #include "PrinterDiscovery.h"
 #include "PrinterManager.h"
+#include "util.h"
 
 class WebRESTContext
 {
@@ -30,6 +31,7 @@ public:
 	using http_status = boost::beast::http::status;
 	
 	void send(http_status status);
+	void send(http_status status, const std::map<std::string,std::string>& headers);
 	void send(const std::string& text, const char* contentType, http_status status = http_status::ok);
 	void send(const nlohmann::json& json, http_status status = http_status::ok);
 	
@@ -44,6 +46,11 @@ public:
 			throw WebErrors::not_acceptable("JSON expected");
 
 		return nlohmann::json::parse(m_request.body());
+	}
+
+	std::string host() const
+	{
+		return m_request.at(boost::beast::http::field::host).to_string();
 	}
 private:
 	const WebRESTHandler::reqtype_t& m_request;
@@ -60,6 +67,7 @@ WebRESTHandler::WebRESTHandler()
 		// Our API
 		HandlerMapping{ std::regex("/v1/printers/discover"), method::post, &WebRESTHandler::restPrintersDiscover },
 		HandlerMapping{ std::regex("/v1/printers"), method::get, &WebRESTHandler::restPrinters },
+		HandlerMapping{ std::regex("/v1/printers"), method::post, &WebRESTHandler::restSetupNewPrinter },
 		HandlerMapping{ std::regex("/v1/printers/(.+)"), method::put, &WebRESTHandler::restSetupPrinter },
 		HandlerMapping{ std::regex("/v1/printers/(.+)"), method::get, &WebRESTHandler::restPrinter },
 				
@@ -110,6 +118,22 @@ void WebRESTHandler::restPrintersDiscover(WebRESTContext& context)
 	context.send(result);
 }
 
+static nlohmann::json jsonFillPrinter(std::shared_ptr<Printer> printer, bool isDefault)
+{
+	return nlohmann::json {
+			{"device_path", printer->devicePath()},
+			{"baud_rate",   printer->baudRate()},
+			{"stopped",     printer->state() == Printer::State::Stopped},
+			{"api_key",     printer->apiKey()},
+			{"name",        printer->name()},
+			{"default",     isDefault},
+			{"connected",   printer->state() == Printer::State::Connected},
+			{"width", printer->printArea().width},
+			{"height", printer->printArea().height},
+			{"depth", printer->printArea().depth}
+	};
+}
+
 void WebRESTHandler::restPrinter(WebRESTContext& context)
 {
 	std::string name = context.match()[1].str();
@@ -119,20 +143,12 @@ void WebRESTHandler::restPrinter(WebRESTContext& context)
 	if (!printer)
 		throw WebErrors::not_found("Unknown printer");
 
-	context.send(nlohmann::json {
-			{"device_path", printer->devicePath()},
-			{"baud_rate",   printer->baudRate()},
-			{"stopped",     printer->state() == Printer::State::Stopped},
-			{"api_key",     printer->apiKey()},
-			{"name",        printer->name()},
-			{"default",     name == defaultPrinter},
-			{"connected",   printer->state() == Printer::State::Connected},
-	});
+	context.send(jsonFillPrinter(printer, printer->name() == defaultPrinter));
 }
 
 void WebRESTHandler::restPrinters(WebRESTContext& context)
 {
-	nlohmann::json result = nlohmann::json::array();
+	nlohmann::json result = nlohmann::json::object();
 
 	std::set<std::string> names = context.printerManager()->printerNames();
 	std::string defaultPrinter = context.printerManager()->defaultPrinter();
@@ -144,18 +160,74 @@ void WebRESTHandler::restPrinters(WebRESTContext& context)
 		if (!printer)
 			continue;
 
-		result[name] = {
-				{"device_path", printer->devicePath()},
-				{"baud_rate",   printer->baudRate()},
-				{"stopped",     printer->state() == Printer::State::Stopped},
-				{"api_key",     printer->apiKey()},
-				{"name",        printer->name()},
-				{"default",     name == defaultPrinter},
-				{"connected",   printer->state() == Printer::State::Connected},
-		};
+		result[name] = jsonFillPrinter(printer, printer->uniqueName() == defaultPrinter);
 	}
 
 	context.send(result);
+}
+
+static void configurePrinterFromJson(nlohmann::json& data, Printer* printer, bool& makeDefault, bool startByDefault)
+{
+	if (data["name"].is_string())
+		printer->setName(data["name"].get<std::string>().c_str());
+
+	if (data["device_path"].is_string())
+		printer->setDevicePath(data["device_path"].get<std::string>().c_str());
+
+	if (data["baud_rate"].is_number())
+		printer->setBaudRate(data["baud_rate"].get<int>());
+
+	if (data["default"].is_boolean() && data["default"].get<bool>())
+		makeDefault = true;
+
+	Printer::PrintArea area = printer->printArea();
+	if (data["width"].is_number())
+		area.width = data["width"].get<int>();
+	if (data["height"].is_number())
+		area.height = data["height"].get<int>();
+	if (data["depth"].is_number())
+		area.depth = data["depth"].get<int>();
+
+	printer->setPrintArea(area);
+
+	if (data["stopped"].is_boolean())
+	{
+		bool stop = data["stopped"].get<bool>();
+		if (stop != (printer->state() == Printer::State::Stopped))
+		{
+			if (stop)
+				printer->stop();
+			else
+				printer->start();
+		}
+	}
+	else if (startByDefault)
+		printer->start();
+}
+
+void WebRESTHandler::restSetupNewPrinter(WebRESTContext& context)
+{
+	std::shared_ptr<Printer> printer = context.printerManager()->newPrinter();
+	nlohmann::json data = context.jsonRequest();
+	bool makeDefault = false;
+
+	if (data["name"].get<std::string>().empty() || data["device_path"].get<std::string>().empty() || data["baud_rate"].get<int>() < 1200)
+		throw WebErrors::bad_request("Missing parameters");
+
+	configurePrinterFromJson(data, printer.get(), makeDefault, true);
+	printer->setUniqueName(urlSafeString(printer->name(), "printer").c_str());
+
+	context.printerManager()->addPrinter(printer);
+
+	if (makeDefault)
+		context.printerManager()->setDefaultPrinter(printer->uniqueName());
+
+	context.printerManager()->saveSettings();
+
+	std::stringstream ss;
+	ss << "http://" << context.host() << "/api/v1/printers/" << printer->uniqueName();
+
+	context.send(WebRESTContext::http_status::created, {std::make_pair("Location", ss.str())});
 }
 
 void WebRESTHandler::restSetupPrinter(WebRESTContext& context)
@@ -173,29 +245,7 @@ void WebRESTHandler::restSetupPrinter(WebRESTContext& context)
 		printer->setUniqueName(name.c_str());
 	}
 
-	if (data["name"])
-		printer->setName(data["name"].get<std::string>().c_str());
-
-	if (data["device_path"])
-		printer->setDevicePath(data["device_path"].get<std::string>().c_str());
-
-	if (data["baud_rate"])
-		printer->setBaudRate(data["baud_rate"].get<int>());
-
-	if (data["default"] && data["default"].get<bool>())
-		makeDefault = true;
-
-	if (data["stopped"])
-	{
-		bool stop = data["stopped"].get<bool>();
-		if (stop != (printer->state() == Printer::State::Stopped))
-		{
-			if (stop)
-				printer->stop();
-			else
-				printer->start();
-		}
-	}
+	configurePrinterFromJson(data, printer.get(), makeDefault, false);
 
 	if (newPrinter)
 		context.printerManager()->addPrinter(printer);
@@ -204,6 +254,22 @@ void WebRESTHandler::restSetupPrinter(WebRESTContext& context)
 		context.printerManager()->setDefaultPrinter(name.c_str());
 
 	context.printerManager()->saveSettings();
+
+	context.send(WebRESTContext::http_status::no_content);
+}
+
+void WebRESTContext::send(http_status status, const std::map<std::string,std::string>& headers)
+{
+	boost::beast::http::response<boost::beast::http::empty_body> res{ status, m_request.version() };
+	res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+
+	for (auto it = headers.begin(); it != headers.end(); it++)
+		res.set(it->first, it->second);
+
+	res.content_length(0);
+	res.keep_alive(m_request.keep_alive());
+
+	m_session->send(std::move(res));
 }
 
 void WebRESTContext::send(http_status status)

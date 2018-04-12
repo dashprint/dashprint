@@ -11,9 +11,10 @@
  * Created on 27. března 2018, 22:00
  */
 
+#include <boost/log/trivial.hpp>
 #include "WebSession.h"
 #include "WebServer.h"
-#include "pi3print_config.h"
+#include "dashprint_config.h"
 #include "WebRESTHandler.h"
 
 WebSession::WebSession(WebServer* ws, boost::asio::ip::tcp::socket socket)
@@ -142,12 +143,14 @@ void WebSession::handleRequest()
         return res;
     };
 
+    BOOST_LOG_TRIVIAL(trace) << "HTTP request: " << m_request;
+
     // Make sure we can handle the method
     if( m_request.method() != boost::beast::http::verb::get &&
         m_request.method() != boost::beast::http::verb::head &&
 		m_request.method() != boost::beast::http::verb::post)
 	{
-        return send(bad_request("Unknown HTTP-method"));
+        return send(bad_request("Unknown HTTP method"));
 	}
 
     // Request path must be absolute and not contain "..".
@@ -155,7 +158,7 @@ void WebSession::handleRequest()
         m_request.target()[0] != '/' ||
         m_request.target().find("..") != boost::beast::string_view::npos)
 	{
-        return send(bad_request("Illegal request-target"));
+        return send(bad_request("Illegal request URL"));
 	}
 	
 	// REST API call handling
@@ -175,6 +178,7 @@ void WebSession::handleRequest()
 		}
 		catch (const std::exception& e)
 		{
+			BOOST_LOG_TRIVIAL(error) << "Error executing REST request: " << e.what();
 			return send(server_error(e.what()));
 		}
 	}

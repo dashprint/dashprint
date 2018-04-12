@@ -28,7 +28,7 @@ export class GLView {
 
         this.camera.xAngle = 20;
         this.camera.yAngle = 20;
-        this.camera.distance = 3;
+        this.camera.distance = 2;
         this.camera.onCameraChange = () => this.requestRender();
     }
 
@@ -47,10 +47,13 @@ export class GLView {
         const vsSource = `
             attribute vec4 aVertexPosition;
             attribute vec4 aVertexColor;
+            
             uniform mat4 uModelViewMatrix;
             uniform mat4 uProjectionMatrix;
             uniform mat4 uCameraMatrix;
+            
             varying lowp vec4 vColor;
+
             void main(void) {
               gl_Position = uProjectionMatrix * uCameraMatrix * uModelViewMatrix * aVertexPosition;
               vColor = aVertexColor;
@@ -59,6 +62,7 @@ export class GLView {
 
         const fsSource = `
             varying lowp vec4 vColor;
+
             void main(void) {
               gl_FragColor = vColor;
             }
@@ -75,7 +79,7 @@ export class GLView {
 
             projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
             modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-            cameraMatrix: gl.getUniformLocation(shaderProgram, 'uCameraMatrix')
+            cameraMatrix: gl.getUniformLocation(shaderProgram, 'uCameraMatrix'),
         };
     }
 
@@ -146,13 +150,11 @@ export class GLView {
         const zNear = 0.1;
         const zFar = 100.0;
         const projectionMatrix = mat4.create();
-        // const cameraMatrix = mat4.create();
 
         // FIXME: Use this: http://marcj.github.io/css-element-queries/
         if (isNaN(aspect))
             aspect = 1;
 
-        //mat4.lookAt(cameraMatrix, new Float32Array([2, 2, 3]), new Float32Array([0, 0, 0]), new Float32Array([0, 1, 0]));
         mat4.perspective(projectionMatrix,
             fieldOfView,
             aspect,
@@ -166,20 +168,29 @@ export class GLView {
             false,
             projectionMatrix);
 
-        /*
-        gl.uniformMatrix4fv(
-            this.programInfo.cameraMatrix,
-            false,
-            cameraMatrix);
-        */
         this.camera.apply(this.gl, this.programInfo);
 
-        this.scene.forEach(r => r.render(this.gl, this.programInfo));
+        this.scene.forEach(r => {
+             if (r.shouldRender(this.camera))
+                r.render(this.gl, this.programInfo)
+        });
     }
 
-    public addRenderable(r: Renderable) {
-        this.scene.push(r);
+    public addRenderable(r: Renderable, prepend: boolean = false) {
+        if (prepend)
+            this.scene.unshift(r);
+        else
+            this.scene.push(r);
+
         r.allocate(this.gl, this.programInfo);
+    }
+
+    public removeRenderable(r: Renderable) {
+        let index = this.scene.indexOf(r);
+        if (index != -1)
+            this.scene.splice(index, 1);
+
+        r.deallocate(this.gl);
     }
 
     static glColor(r: number, g: number, b: number, a: number): number[] {

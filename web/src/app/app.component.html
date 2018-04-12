@@ -9,7 +9,20 @@
       <a href="javascript://" class="active nav-link nav-text">Print</a>
       <a href="javascript://" class="nav-link nav-text">Slice</a>
 
-      <clr-dropdown [clrCloseMenuOnItemClick]="true">
+    </div>
+
+    <div class="header-actions">
+      <a href="javascript://" class="nav-link nav-icon">
+        <clr-icon shape="cog"></clr-icon>
+      </a>
+    </div>
+  </clr-header>
+
+  <div class="content-container">
+    <main *ngIf="printers && printers.length" class="content-area">
+        <h2>Printer name here</h2>
+        
+        <clr-dropdown [clrCloseMenuOnItemClick]="true">
         <button class="btn btn-link" clrDropdownTrigger>
           Switch printer
           <clr-icon shape="caret down"></clr-icon>
@@ -22,18 +35,7 @@
           <button type="button" class="dropdown-item" (click)="addPrinter()">Add printer...</button>
         </clr-dropdown-menu>
       </clr-dropdown>
-
-    </div>
-
-    <div class="header-actions">
-      <a href="javascript://" class="nav-link nav-icon">
-        <clr-icon shape="cog"></clr-icon>
-      </a>
-    </div>
-  </clr-header>
-
-  <div class="content-container">
-    <main *ngIf="printers && printers.length" class="content-area">
+        
     </main>
     <main *ngIf="!printers || !printers.length" class="content-area no-printers">
       <h2>No printers</h2>

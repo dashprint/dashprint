@@ -1,5 +1,6 @@
 import * as mat4 from "gl-matrix-mat4";
 import {ProgramInfo} from "./GLView";
+import {Camera} from "./Camera";
 
 export class Renderable {
     _position: Float32Array = new Float32Array([0,0,0]);
@@ -16,6 +17,9 @@ export class Renderable {
 
     public render(gl: WebGLRenderingContext, programInfo: ProgramInfo) {
         gl.uniformMatrix4fv(programInfo.modelViewMatrix, false, this.matrix);
+    }
+
+    public deallocate(gl: WebGLRenderingContext) {
     }
 
     updateMatrix() {
@@ -55,5 +59,9 @@ export class Renderable {
     set rotation(rot: Float32Array) {
         this._rotation = rot;
         this.updateMatrix();
+    }
+
+    public shouldRender(camera: Camera): boolean {
+        return true;
     }
 }

@@ -34,6 +34,7 @@ private:
 	void restPrinters(WebRESTContext& context);
 	void restPrinter(WebRESTContext& context);
 	void restSetupPrinter(WebRESTContext& context);
+	void restSetupNewPrinter(WebRESTContext& context);
 private:
 	typedef void (WebRESTHandler::*handler_t)(WebRESTContext& context);
 	

@@ -1,11 +1,12 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import {PrintService} from "../print.service";
-import {DiscoveredPrinter} from "../Printer";
+import {DiscoveredPrinter, Printer} from "../Printer";
 import {Modal} from "../Modal";
 import {FormControl, FormGroup, Validators, FormBuilder} from "@angular/forms";
 import {GLView} from "../webgl/GLView";
 import {PrinterView} from "../webgl/PrinterView";
 import {StlmodelService} from "../webgl/stlmodel.service";
+import {ClrWizardPage} from "@clr/angular";
 
 @Component({
   selector: 'modal-addprinter',
@@ -20,6 +21,7 @@ export class AddprinterComponent extends Modal implements OnInit {
   //printerName: string;
   formPageOne: FormGroup;
   formPageTwo: FormGroup;
+  @ViewChild("finishPage") finishPage: ClrWizardPage;
 
   @ViewChild('printerPreview') printerPreview: ElementRef;
   printerView: PrinterView;
@@ -88,6 +90,21 @@ export class AddprinterComponent extends Modal implements OnInit {
 
   onCreate() {
       // TODO:
+      let printer: Printer = new Printer();
+      printer.width = this.formPageTwo.get('width').value;
+      printer.height = this.formPageTwo.get('height').value;
+      printer.depth = this.formPageTwo.get('depth').value;
+
+      printer.baudRate = this.formPageOne.get('baudRate').value;
+      printer.devicePath = this.formPageOne.get('devicePath').value;
+      printer.name = this.formPageOne.get('printerName').value;
+
+      this.printService.addPrinter(printer).subscribe((url : string) => {
+            console.log("Printer created at " + url);
+            this.finishPage.completed = true;
+
+            // TODO: trigger printer list reload
+      });
   }
 
 }

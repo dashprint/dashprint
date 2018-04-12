@@ -15,6 +15,8 @@ export class PrinterView extends GLView {
     model: Triangles;
     printBox: Lines;
     axes: Lines;
+    printAreaLines: Lines;
+    printAreaPlane: Triangles;
 
     constructor(canvas: HTMLCanvasElement, private stlLoader: StlmodelService) {
         super(canvas);
@@ -25,7 +27,7 @@ export class PrinterView extends GLView {
             this.model = model;
 
             // Scale it down to 1.0
-            this.model.setScale(0.005);
+            this.model.setScale(1/210);
 
             this.model.color = new Float32Array([0.3, 0.3, 0.3, 0.15]);
 
@@ -75,6 +77,10 @@ export class PrinterView extends GLView {
         this.axes.addLine(0, 0, 0, 0, 0.1, 0, GLView.glColor(0, 0, 255, 255));
         this.addRenderable(this.axes);
 
+        this.printAreaPlane = Triangles.createPlane();
+        this.printAreaPlane.color = new Float32Array([0.95, 0.95, 0.95, 1]);
+        this.addRenderable(this.printAreaPlane);
+
         this.setDimensions(this.x, this.y, this.z);
     }
 
@@ -85,7 +91,13 @@ export class PrinterView extends GLView {
         this.z = z;
         // this.plateScale = base;
 
-        this.printBox.setScale(new Float32Array([x / mmScale, z / mmScale, y / mmScale]));
+        let scale = new Float32Array([x / mmScale, z / mmScale, y / mmScale]);
+
+        this.printAreaPlane.setScale(scale);
+        //this.printAreaPlane.position[1] = z/mmScale/2;
+        //this.printAreaPlane.updateMatrix();
+
+        this.printBox.setScale(scale);
         this.printBox.position[1] = z/mmScale/2;
         this.printBox.updateMatrix();
 
@@ -93,7 +105,40 @@ export class PrinterView extends GLView {
         this.axes.position[2] = y/mmScale/2;
         this.axes.updateMatrix();
 
+        this.createPrintAreaLines();
+
         this.requestRender();
+    }
+
+    private createPrintAreaLines() {
+        let lines: number[] = [];
+
+        if (this.printAreaLines)
+            this.removeRenderable(this.printAreaLines);
+
+        for (let pos = 5; pos < this.x; pos += 10) {
+            lines.push(
+                (pos-this.x/2)/mmScale, 0, (-this.y/2)/mmScale,
+                (pos-this.x/2)/mmScale, 0, (this.y/2)/mmScale,
+            );
+        }
+
+        for (let pos = 5; pos < this.y; pos += 10) {
+            lines.push(
+                (this.x/2)/mmScale, 0, (pos-this.y/2)/mmScale,
+                (-this.x/2)/mmScale, 0, (pos-this.y/2)/mmScale,
+            );
+        }
+
+        this.printAreaLines = new Lines(lines, [0.5, 0.5, 0.5, 1]);
+
+        // FIXME: This is a hack that should be replaced with a proper GLSL shader
+        this.printAreaLines.shouldRender = camera => {
+            return camera.yAngle >= 0;
+        };
+        // this.printAreaLines.position[1] = this.z/mmScale/2;
+        // this.printAreaLines.updateMatrix();
+        this.addRenderable(this.printAreaLines);
     }
 
 }

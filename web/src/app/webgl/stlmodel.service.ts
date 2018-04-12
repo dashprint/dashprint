@@ -27,7 +27,7 @@ export class StlmodelService {
 
       this.worker.addEventListener('message', (msg) => {
           if (msg.data) {
-              observer.next(new Triangles(msg.data.vertices, msg.data.center, msg.data.dimensions));
+              observer.next(new Triangles(msg.data.vertices, null, msg.data.center, msg.data.dimensions));
               observer.complete();
           } else {
               throw Observable.throw("STL failed to load");

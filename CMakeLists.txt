@@ -1,4 +1,4 @@
-project(pi3print)
+project(dashprint)
 cmake_minimum_required(VERSION 3.1)
 
 option(WITH_UDEV "Enable udev-based device detection" ON)
@@ -25,7 +25,7 @@ endif (WITH_UDEV)
 
 add_definitions(-DBOOST_ALL_NO_LIB -DBOOST_ERROR_CODE_HEADER_ONLY -DBOOST_CHRONO_HEADER_ONLY -DBOOST_SYSTEM_NO_DEPRECATED)
 
-set(pi3print_sources
+set(dashprint_sources
 	src/main.cpp
     src/PrinterDiscovery.cpp
     src/StaticPrinterDiscovery.cpp
@@ -34,10 +34,11 @@ set(pi3print_sources
     src/WebRESTHandler.cpp
     src/Printer.cpp
     src/PrinterManager.cpp
+    src/util.cpp
 )
 
 # Compile Boost.Filesystem
-set(pi3print_sources ${pi3print_sources}
+set(dashprint_sources ${dashprint_sources}
     src/boost/libs/filesystem/src/path.cpp
     src/boost/libs/filesystem/src/operations.cpp
     src/boost/libs/filesystem/src/codecvt_error_category.cpp
@@ -49,7 +50,7 @@ set(pi3print_sources ${pi3print_sources}
 
 # Compile Boost.Log
 include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/log/src)
-set(pi3print_sources ${pi3print_sources}
+set(dashprint_sources ${dashprint_sources}
     src/boost/libs/log/src/attribute_name.cpp
     src/boost/libs/log/src/attribute_set.cpp
     src/boost/libs/log/src/attribute_value_set.cpp
@@ -88,7 +89,7 @@ set(pi3print_sources ${pi3print_sources}
 )
 
 # Compile Boost.Thread
-set(pi3print_sources ${pi3print_sources}
+set(dashprint_sources ${dashprint_sources}
     src/boost/libs/thread/src/future.cpp
     src/boost/libs/thread/src/pthread/thread.cpp
     src/boost/libs/thread/src/pthread/once_atomic.cpp
@@ -103,17 +104,17 @@ FOREACH(child ${children})
 ENDFOREACH()
 
 if (WITH_UDEV)
-    set(pi3print_sources ${pi3print_sources} src/UdevPrinterDiscovery.cpp)
+    set(dashprint_sources ${dashprint_sources} src/UdevPrinterDiscovery.cpp)
 endif (WITH_UDEV)
 
-configure_file("${CMAKE_SOURCE_DIR}/pi3print_config.h.in" "${CMAKE_BINARY_DIR}/pi3print_config.h")
+configure_file("${CMAKE_SOURCE_DIR}/dashprint_config.h.in" "${CMAKE_BINARY_DIR}/dashprint_config.h")
 include_directories("${CMAKE_BINARY_DIR}")
 
-add_executable(pi3print ${pi3print_sources})
-target_link_libraries(pi3print ${Boost_LIBRARIES} ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(dashprint ${dashprint_sources})
+target_link_libraries(dashprint ${Boost_LIBRARIES} ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 if(UNIX AND NOT APPLE)
-    target_link_libraries(pi3print rt)
+    target_link_libraries(dashprint rt)
 endif()
 
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/web/dist/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pi3print/web")
-install(TARGETS pi3print DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/web/dist/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/dashprint/web")
+install(TARGETS dashprint DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")

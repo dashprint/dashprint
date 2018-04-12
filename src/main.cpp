@@ -4,17 +4,16 @@
 #include <boost/asio.hpp>
 #include "PrinterDiscovery.h"
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
 #include <boost/filesystem.hpp>
 #include <cstdlib>
 #include <boost/log/trivial.hpp>
+#include "util.h"
 #include "WebServer.h"
 #include "PrinterManager.h"
 
 static void discoverPrinters();
 static void runApp();
 static void sanityCheck();
-void loadConfig();
 
 boost::property_tree::ptree g_config;
 
@@ -67,22 +66,6 @@ void runApp()
 	webServer.start(g_config.get<int>("WebServer.port", 8970));
 	
 	io.run();
-}
-
-void loadConfig()
-{
-	boost::filesystem::path configPath(::getenv("HOME"));
-	
-	configPath /= ".config/pi3printrc";
-	
-	try
-	{
-		boost::property_tree::ini_parser::read_ini(configPath.string(), g_config);
-	}
-	catch (const std::exception& e)
-	{
-		BOOST_LOG_TRIVIAL(warning) << "Failed to load configuration: " << e.what();
-	}
 }
 
 void sanityCheck()

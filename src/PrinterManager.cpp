@@ -12,6 +12,8 @@
  */
 
 #include "PrinterManager.h"
+#include <boost/log/trivial.hpp>
+#include "util.h"
 
 PrinterManager::PrinterManager(boost::asio::io_service& io, boost::property_tree::ptree& config)
 : m_io(io), m_config(config)
@@ -25,14 +27,16 @@ PrinterManager::~PrinterManager()
 
 void PrinterManager::save()
 {
-	boost::property_tree::ptree& printers = m_config.get_child("printers");
+	boost::property_tree::ptree& printers = m_config.put_child("printers", boost::property_tree::ptree());
 	printers.put("default", m_defaultPrinter);
 
 	for (auto it : m_printers)
 	{
-		boost::property_tree::ptree& printer = printers.get_child(it.first);
+		boost::property_tree::ptree& printer = printers.put_child(it.first, boost::property_tree::ptree());
 		it.second->save(printer);
 	}
+
+	saveConfig();
 }
 
 void PrinterManager::load()
@@ -90,6 +94,9 @@ void PrinterManager::addPrinter(std::shared_ptr<Printer> printer)
 		std::string newName = origName + std::to_string(idx++);
 		printer->setUniqueName(newName.c_str());
 	}
+
+	BOOST_LOG_TRIVIAL(info) << "Adding a new printer, unique name: \""
+							<< printer->uniqueName() << "\", device: " << printer->devicePath();
 	
 	m_printers.insert(std::make_pair(printer->uniqueName(), printer));
 	if (m_defaultPrinter.empty())

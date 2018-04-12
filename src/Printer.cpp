@@ -25,6 +25,7 @@
 #include <ctype.h>
 
 static const boost::posix_time::seconds RECONNECT_DELAY(5);
+static const int DATA_TIMEOUT = 5000;
 
 Printer::Printer(boost::asio::io_service &io)
 		: m_io(io), m_serial(io), m_reconnectTimer(io), m_timeoutTimer(io), m_temperatureTimer(io)
@@ -43,6 +44,9 @@ void Printer::load(const boost::property_tree::ptree& tree)
 	m_baudRate = tree.get<int>("baud_rate");
 	m_apiKey = tree.get<std::string>("api_key");
 	m_name = tree.get<std::string>("name");
+	m_printArea.width = tree.get<int>("width");
+	m_printArea.height = tree.get<int>("height");
+	m_printArea.depth = tree.get<int>("depth");
 
 	if (!tree.get<bool>("stopped"))
 		start();
@@ -55,6 +59,24 @@ void Printer::save(boost::property_tree::ptree& tree)
 	tree.put("api_key", m_apiKey);
 	tree.put("name", m_name);
 	tree.put("stopped", m_state == State::Stopped);
+	tree.put("width", m_printArea.width);
+	tree.put("height", m_printArea.height);
+	tree.put("depth", m_printArea.depth);
+}
+
+const char* Printer::stateName(State state)
+{
+	switch (state)
+	{
+		case State::Stopped:
+			return "Stopped";
+		case State::Disconnected:
+			return "Disconnected";
+		case State::Initializing:
+			return "Initializing";
+		case State::Connected:
+			return "Connected";
+	}
 }
 
 void Printer::setUniqueName(const char *name)
@@ -67,6 +89,15 @@ void Printer::setDevicePath(const char *devicePath)
 	if (m_devicePath != devicePath)
 	{
 		m_devicePath = devicePath;
+		deviceSettingsChanged();
+	}
+}
+
+void Printer::setPrintArea(PrintArea area)
+{
+	if (m_printArea != area)
+	{
+		m_printArea = area;
 		deviceSettingsChanged();
 	}
 }
@@ -86,6 +117,7 @@ void Printer::deviceSettingsChanged()
 	{
 		// Reconnect
 		reset();
+		BOOST_LOG_TRIVIAL(trace) << "Reconnecting to " << m_uniqueName << " due to device settings change";
 		doConnect();
 	}
 }
@@ -95,12 +127,14 @@ void Printer::start()
 	if (m_state != State::Stopped)
 		return;
 
+	BOOST_LOG_TRIVIAL(info) << "Printer " << m_uniqueName << " started";
 	setState(State::Disconnected);
 	doConnect();
 }
 
 void Printer::stop()
 {
+	BOOST_LOG_TRIVIAL(info) << "Printer " << m_uniqueName << " stopped";
 	setState(State::Stopped);
 	reset();
 }
@@ -112,6 +146,8 @@ void Printer::reset()
 	m_serial.cancel(ec);
 	m_serial.close(ec);
 	m_reconnectTimer.cancel(ec);
+	m_timeoutTimer.cancel(ec);
+	m_executingCommand = false;
 
 	m_replyLines.clear();
 	while (!m_commandQueue.empty())
@@ -163,7 +199,7 @@ void Printer::setState(State state)
 {
 	if (state != m_state)
 	{
-		BOOST_LOG_TRIVIAL(trace) << "State change on printer " << m_uniqueName << ": " << int(state);
+		BOOST_LOG_TRIVIAL(trace) << "State change on printer " << m_uniqueName << ": " << stateName(state);
 
 		m_state = state;
 		m_stateChangeSignal(state);
@@ -187,7 +223,7 @@ void Printer::doConnect()
 
 	try
 	{
-		BOOST_LOG_TRIVIAL(debug) << "Opening serial port " << m_devicePath << std::endl;
+		BOOST_LOG_TRIVIAL(debug) << "Opening serial port " << m_devicePath;
 
 		m_serial.open(m_devicePath.c_str());
 
@@ -201,6 +237,10 @@ void Printer::doConnect()
 
 		setState(State::Initializing);
 		doRead();
+
+		// Initial value
+		m_lastIncomingData = std::chrono::steady_clock::now();
+		setupTimeoutCheck();
 
 		// Get printer information
 		sendCommand("M115", [=](const std::vector<std::string>& reply) {
@@ -227,6 +267,34 @@ void Printer::doConnect()
 				doConnect();
 		});
 	}
+}
+
+void Printer::setupTimeoutCheck()
+{
+	m_timeoutTimer.expires_from_now(boost::posix_time::seconds(1));
+	m_timeoutTimer.async_wait(std::bind(&Printer::timeoutCheck, this, std::placeholders::_1));
+}
+
+void Printer::timeoutCheck(const boost::system::error_code& ec)
+{
+	if (ec)
+		return;
+
+	if (!m_commandQueue.empty())
+	{
+		auto now = std::chrono::steady_clock::now();
+		if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastIncomingData).count() > DATA_TIMEOUT)
+		{
+			BOOST_LOG_TRIVIAL(error) << "Comm timeout on printer " << m_uniqueName;
+
+			setState(State::Disconnected);
+			reset();
+			doConnect();
+			return;
+		}
+	}
+
+	setupTimeoutCheck();
 }
 
 void Printer::ioError(const boost::system::error_code& ec)
@@ -259,6 +327,8 @@ void Printer::readDone(const boost::system::error_code& ec)
 	std::string line;
 
 	std::getline(is, line);
+
+	m_lastIncomingData = std::chrono::steady_clock::now();
 
 	BOOST_LOG_TRIVIAL(trace) << "Read on printer " << m_uniqueName << ": " << line;
 

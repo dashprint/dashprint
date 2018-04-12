@@ -63,6 +63,7 @@ public:
 		Initializing,
 		Connected,
 	};
+	static const char* stateName(State state);
 	
 	State state() const { return m_state; }
 
@@ -77,6 +78,17 @@ public:
 		float target;
 	};
 	std::map<std::string, Temperature> getTemperatures() const;
+
+	struct PrintArea
+	{
+		int width, height, depth;
+		bool operator!=(const PrintArea& that) const
+		{
+			return width != that.width || height != that.height || depth != that.depth;
+		}
+	};
+	const PrintArea& printArea() const { return m_printArea; }
+	void setPrintArea(PrintArea area);
 private:
 	void setState(State state);
 
@@ -91,6 +103,9 @@ private:
 
 	void reset();
 	void ioError(const boost::system::error_code& ec);
+
+	void setupTimeoutCheck();
+	void timeoutCheck(const boost::system::error_code& ec);
 
 	// Parse 'key:some value' pairs
 	static void kvParse(const std::string& line, std::map<std::string,std::string>& values);
@@ -124,6 +139,9 @@ private:
 	std::string m_apiKey;
 	std::map<std::string, Temperature> m_temperatures;
 	mutable std::mutex m_temperaturesMutex;
+
+	PrintArea m_printArea;
+	std::chrono::time_point<std::chrono::steady_clock> m_lastIncomingData;
 };
 
 #endif /* PRINTER_H */

@@ -27,24 +27,39 @@ export class Lines extends Renderable {
     public allocate(gl: WebGLRenderingContext, programInfo: ProgramInfo) {
         super.allocate(gl, programInfo);
 
-        this.vertexBuffer = gl.createBuffer();
+        if (!this.vertexBuffer)
+            this.vertexBuffer = gl.createBuffer();
+
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
         if (this.indices) {
-            this.indexBuffer = gl.createBuffer();
+            if (!this.indexBuffer)
+                this.indexBuffer = gl.createBuffer();
+
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
             gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indices, gl.STATIC_DRAW);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
         }
 
         if (this.colors.length > 4) {
-            this.colorBuffer = gl.createBuffer();
+            if (!this.colorBuffer)
+                this.colorBuffer = gl.createBuffer();
+
             gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.colors), gl.STATIC_DRAW);
             gl.bindBuffer(gl.ARRAY_BUFFER, null);
         }
+    }
+
+    public deallocate(gl: WebGLRenderingContext) {
+        if (this.vertexBuffer)
+            gl.deleteBuffer(this.vertexBuffer);
+        if (this.indexBuffer)
+            gl.deleteBuffer(this.indexBuffer);
+        if (this.colorBuffer)
+            gl.deleteBuffer(this.colorBuffer);
     }
 
     public render(gl: WebGLRenderingContext, programInfo: ProgramInfo) {

@@ -24,6 +24,9 @@ export class PrintService {
                   baudRate = data[key].baud_rate;
                   stopped = data[key].stopped;
                   connected = data[key].connected;
+                  width = data[key].width;
+                  height = data[key].height;
+                  depth = data[key].depth;
               });
           });
 
@@ -33,6 +36,26 @@ export class PrintService {
 
   discoverPrinters() : Observable<DiscoveredPrinter[]> {
       return this.http.post<DiscoveredPrinter[]>('/api/v1/printers/discover', '');
+  }
+
+  addPrinter(printer: Printer) : Observable<string> {
+      return Observable.create((observer) => {
+          this.http.post('/api/v1/printers', {
+              name: printer.name,
+              default_printer: printer.defaultPrinter,
+              device_path: printer.devicePath,
+              baud_rate: printer.baudRate,
+              stopped: printer.stopped,
+              width: printer.width,
+              height: printer.height,
+              depth: printer.depth
+          }, {observe: "response"}).subscribe(resp => {
+              // TODO: Error handling
+              let newurl = resp.headers.get('Location');
+              observer.next(newurl);
+              observer.complete();
+          });
+      });
   }
 
 }

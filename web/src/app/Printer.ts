@@ -6,6 +6,7 @@ export class Printer {
     baudRate: number;
     defaultPrinter: boolean;
     connected: boolean;
+    stopped: boolean;
     width: number;
     height: number;
     depth: number;
