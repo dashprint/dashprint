@@ -1,0 +1,7 @@
+#ifndef DASHPRINT_CONFIG_H_IN
+#define DASHPRINT_CONFIG_H_IN
+
+#define WEBROOT "${CMAKE_INSTALL_PREFIX}/share/dashprint/web/"
+
+#endif /* DASHPRINT_CONFIG_H_IN */
+

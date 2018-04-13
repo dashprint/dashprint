@@ -68,8 +68,12 @@ WebRESTHandler::WebRESTHandler()
 		HandlerMapping{ std::regex("/v1/printers/discover"), method::post, &WebRESTHandler::restPrintersDiscover },
 		HandlerMapping{ std::regex("/v1/printers"), method::get, &WebRESTHandler::restPrinters },
 		HandlerMapping{ std::regex("/v1/printers"), method::post, &WebRESTHandler::restSetupNewPrinter },
-		HandlerMapping{ std::regex("/v1/printers/(.+)"), method::put, &WebRESTHandler::restSetupPrinter },
-		HandlerMapping{ std::regex("/v1/printers/(.+)"), method::get, &WebRESTHandler::restPrinter },
+		HandlerMapping{ std::regex("/v1/printers/([^/]+)"), method::put, &WebRESTHandler::restSetupPrinter },
+		HandlerMapping{ std::regex("/v1/printers/([^/]+)"), method::get, &WebRESTHandler::restPrinter },
+		HandlerMapping{ std::regex("/v1/printers/([^/]+)"), method::delete_, &WebRESTHandler::restDeletePrinter },
+		HandlerMapping{ std::regex("/v1/printers/([^/]+)/job"), method::post, &WebRESTHandler::restSubmitJob },
+		HandlerMapping{ std::regex("/v1/printers/([^/]+)/job"), method::put, &WebRESTHandler::restModifyJob },
+		HandlerMapping{ std::regex("/v1/printers/([^/]+)/job"), method::get, &WebRESTHandler::restGetJob },
 				
 		// OctoPrint emu API
 	});
@@ -144,6 +148,15 @@ void WebRESTHandler::restPrinter(WebRESTContext& context)
 		throw WebErrors::not_found("Unknown printer");
 
 	context.send(jsonFillPrinter(printer, printer->name() == defaultPrinter));
+}
+
+void WebRESTHandler::restDeletePrinter(WebRESTContext& context)
+{
+	std::string name = context.match()[1].str();
+	if (!context.printerManager()->deletePrinter(name.c_str()))
+		throw WebErrors::not_found("Unknown printer");
+	else
+		context.send(WebRESTContext::http_status::no_content);
 }
 
 void WebRESTHandler::restPrinters(WebRESTContext& context)
@@ -256,6 +269,21 @@ void WebRESTHandler::restSetupPrinter(WebRESTContext& context)
 	context.printerManager()->saveSettings();
 
 	context.send(WebRESTContext::http_status::no_content);
+}
+
+void WebRESTHandler::restSubmitJob(WebRESTContext& context)
+{
+
+}
+
+void WebRESTHandler::restModifyJob(WebRESTContext& context)
+{
+
+}
+
+void WebRESTHandler::restGetJob(WebRESTContext& context)
+{
+
 }
 
 void WebRESTContext::send(http_status status, const std::map<std::string,std::string>& headers)

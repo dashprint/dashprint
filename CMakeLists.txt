@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.1)
 option(WITH_UDEV "Enable udev-based device detection" ON)
 
 set(CMAKE_CXX_STANDARD 11)
+enable_language(ASM)
 
 find_package(Threads)
 
@@ -13,7 +14,7 @@ if (WITH_UDEV)
     include(cmake/Findudev.cmake)
 
     if (NOT UDEV_FOUND)
-        status(FATAL_ERROR "libudev is required")
+        message(FATAL_ERROR "libudev is required")
     endif (NOT UDEV_FOUND)
 
     include_directories(${UDEV_INCLUDE_DIR})
@@ -23,7 +24,7 @@ endif (WITH_UDEV)
 # which is used as a header-only library.
 #find_package(Boost 1.55.0 REQUIRED system)
 
-add_definitions(-DBOOST_ALL_NO_LIB -DBOOST_ERROR_CODE_HEADER_ONLY -DBOOST_CHRONO_HEADER_ONLY -DBOOST_SYSTEM_NO_DEPRECATED)
+add_definitions(-DBOOST_ALL_NO_LIB -DBOOST_ERROR_CODE_HEADER_ONLY -DBOOST_CHRONO_HEADER_ONLY -DBOOST_SYSTEM_NO_DEPRECATED -DBOOST_BEAST_USE_POSIX_FILE=1 -DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
 
 set(dashprint_sources
 	src/main.cpp
@@ -31,11 +32,14 @@ set(dashprint_sources
     src/StaticPrinterDiscovery.cpp
     src/WebServer.cpp
     src/WebSession.cpp
+    src/WebsocketSession.cpp
     src/WebRESTHandler.cpp
     src/Printer.cpp
     src/PrinterManager.cpp
     src/util.cpp
-)
+        src/PrintJob.cpp src/PrintJob.h)
+
+include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/numeric/conversion/include)
 
 # Compile Boost.Filesystem
 set(dashprint_sources ${dashprint_sources}
@@ -95,6 +99,37 @@ set(dashprint_sources ${dashprint_sources}
     src/boost/libs/thread/src/pthread/once_atomic.cpp
     src/boost/libs/thread/src/tss_null.cpp
 )
+
+# Compile Boost.Coroutine
+set(dashprint_sources ${dashprint_sources}
+    src/boost/libs/coroutine/src/detail/coroutine_context.cpp
+    src/boost/libs/coroutine/src/posix/stack_traits.cpp
+    src/boost/libs/coroutine/src/exceptions.cpp
+)
+
+# Compile Context
+message(STATUS "Processor: ${CMAKE_SYSTEM_PROCESSOR}")
+if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "(armv6l|armv7l)")
+    set(dashprint_sources ${dashprint_sources}
+        src/boost/libs/context/src/asm/jump_arm_aapcs_elf_gas.S
+        src/boost/libs/context/src/asm/make_arm_aapcs_elf_gas.S
+        src/boost/libs/context/src/asm/ontop_arm_aapcs_elf_gas.S
+    )
+elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "(x86|i386|i686|x86_64|amd64)")
+    if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+        set(dashprint_sources ${dashprint_sources}
+            src/boost/libs/context/src/asm/jump_x86_64_sysv_elf_gas.S
+            src/boost/libs/context/src/asm/make_x86_64_sysv_elf_gas.S
+            src/boost/libs/context/src/asm/ontop_x86_64_sysv_elf_gas.S
+        )
+    else()
+        set(dashprint_sources ${dashprint_sources}
+            src/boost/libs/context/src/asm/jump_i386_sysv_elf_gas.S
+            src/boost/libs/context/src/asm/make_i386_sysv_elf_gas.S
+            src/boost/libs/context/src/asm/ontop_i386sysv_elf_gas.S
+            )
+    endif()
+endif()
 
 FILE(GLOB children ${CMAKE_SOURCE_DIR}/src/boost/libs/*)
 FOREACH(child ${children})

@@ -12,10 +12,18 @@
  */
 
 #include <boost/log/trivial.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include "WebSession.h"
 #include "WebServer.h"
 #include "dashprint_config.h"
 #include "WebRESTHandler.h"
+#include "file_body_posix.ipp"
+#include "nlohmann/json.hpp"
+#include "WebsocketSession.h"
+#include <cstdlib>
+#include <unistd.h>
 
 WebSession::WebSession(WebServer* ws, boost::asio::ip::tcp::socket socket)
 : m_server(ws), m_socket(std::move(socket)), m_strand(m_socket.get_executor())
@@ -29,25 +37,182 @@ WebSession::~WebSession()
 
 void WebSession::run()
 {
-	doRead();
+	auto self = shared_from_this();
+	boost::asio::spawn(m_strand, [this, self](boost::asio::yield_context yield) {
+		m_yield.emplace(yield);
+		doRead();
+	});
+}
+
+class deletefile
+{
+public:
+	~deletefile()
+	{
+		if (!m_path.empty())
+			::unlink(m_path.c_str());
+	}
+	void deleteLater(const std::string& path)
+	{
+		m_path = path;
+	}
+private:
+	std::string m_path;
+};
+
+std::string WebSession::processLargeBody(uint64_t length)
+{
+	std::unique_ptr<char[]> path;
+	std::string dir = cachePath();
+
+	path.reset(new char[dir.length() + 13]);
+	std::strcpy(path.get(), dir.c_str());
+	std::strcat(path.get(), "uploadXXXXXX");
+
+	int fd = ::mkstemp(path.get());
+	if (fd == -1)
+		throw std::runtime_error("Unable to create temporary file");
+
+	uint64_t read = 0;
+	while (read < length)
+	{
+		size_t num = std::min<size_t>(m_buffer.size(), length-read);
+
+		::write(fd, m_buffer.data().data(), num);
+
+		read += num;
+		m_buffer.consume(num);
+
+		boost::asio::async_read(m_socket, m_buffer.prepare(10*1024), *m_yield);
+	}
+
+	::close(fd);
+	return path.get();
+}
+
+bool WebSession::usesOctoPrintApiKey(boost::beast::string_view url)
+{
+	return boost::algorithm::starts_with(url, "/api/")
+			&& ! boost::algorithm::starts_with(url, "/api/v1/");
+}
+
+bool WebSession::handleExpect100Continue()
+{
+	if (m_requestParser->get()[boost::beast::http::field::expect] == "100-continue")
+	{
+		if (!usesOctoPrintApiKey(m_requestParser->get().target()))
+		{
+			if (!handleAuthentication())
+				return false;
+		}
+
+		boost::beast::http::response<boost::beast::http::empty_body> res{boost::beast::http::status::continue_,
+																		 m_requestParser->get().version()};
+		res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+		res.keep_alive(true);
+
+		boost::beast::http::async_write(m_socket, res, *m_yield);
+	}
+	return true;
 }
 
 void WebSession::doRead()
 {
-	m_request = {};
-	
-	boost::beast::http::async_read(m_socket, m_buffer, m_request,
-			boost::asio::bind_executor(m_strand, std::bind(&WebSession::onRead, shared_from_this(), std::placeholders::_1, std::placeholders::_2)));
+	auto self = shared_from_this();
+
+	while (true)
+	{
+		deletefile df;
+
+		try
+		{
+			m_requestParser.reset(new boost::beast::http::request_parser<boost::beast::http::string_body>());
+			m_requestParser->body_limit(30*1024*1024);
+
+			boost::beast::http::async_read_header(m_socket, m_buffer, *m_requestParser, *m_yield);
+
+			// Returns false if precondition failed
+			if (!handleExpect100Continue())
+				continue;
+
+			boost::optional<uint64_t> length;
+			m_requestParser->get().content_length(length);
+
+			if (length && length.value() > 1024 * 1024)
+			{
+				// Save body to a temporary file
+				m_bodyFile = processLargeBody(length.value());
+				df.deleteLater(m_bodyFile);
+			}
+			else
+			{
+				m_bodyFile.clear();
+				boost::beast::http::async_read(m_socket, m_buffer, m_requestParser->base(), *m_yield);
+			}
+
+			if (!usesOctoPrintApiKey(m_requestParser->get().target()))
+			{
+				if (!handleAuthentication())
+					continue;
+			}
+
+			m_request = m_requestParser->release();
+
+			if (!handleRequest())
+				break;
+		}
+		catch (const std::exception &e)
+		{
+			doClose();
+			break;
+		}
+	}
 }
 
-void WebSession::onRead(boost::system::error_code ec, std::size_t bytesTransferred)
+bool WebSession::handleAuthentication()
 {
-	boost::ignore_unused(bytesTransferred);
-	
-	if(ec == boost::beast::http::error::end_of_stream)
-		doClose();
-	else if (!ec)
-		handleRequest();
+	// Only URLs that require authentication are passed to this method
+	boost::beast::string_view authorization = m_requestParser->get()[boost::beast::http::field::authorization].to_string();
+
+	if (authorization.empty() || !boost::algorithm::starts_with(authorization, "Digest "))
+	{
+		sendWWWAuthenticate();
+		return false;
+	}
+
+	std::map<std::string,std::string> params;
+	parseAuthenticationKV(authorization.substr(7).to_string(), params);
+
+	// TODO: process parameters
+
+	return true;
+}
+
+void WebSession::parseAuthenticationKV(std::string in, std::map<std::string,std::string>& out)
+{
+	boost::algorithm::trim(in);
+	boost::split(out, in, boost::is_any_of(","));
+
+	// Remove quotes
+	for (auto it = out.begin(); it != out.end(); it++)
+	{
+		if (boost::algorithm::starts_with(it->second, "\"") && boost::algorithm::ends_with(it->second, "\""))
+			it->second = it->second.substr(1, it->second.length()-2);
+	}
+}
+
+void WebSession::sendWWWAuthenticate()
+{
+	// TODO: send WWW-Authenticate
+}
+
+std::string WebSession::cachePath()
+{
+	const char* home = ::getenv("HOME");
+	std::string path = std::string(home) + "/.cache/dashprint/";
+
+	::mkdir(path.c_str(), 0777);
+	return path;
 }
 
 void WebSession::doClose()
@@ -78,9 +243,6 @@ static std::string path_cat(boost::beast::string_view base, boost::beast::string
     return result;
 }
 
-// A lot of the following code was taken from
-// http://www.boost.org/doc/libs/master/libs/beast/example/http/server/async/http_server_async.cpp
-
 
 template<bool isRequest, class Body, class Fields>
 void WebSession::send(boost::beast::http::message<isRequest, Body, Fields>&& response)
@@ -88,148 +250,146 @@ void WebSession::send(boost::beast::http::message<isRequest, Body, Fields>&& res
 	// Ensure that this and response's lifetime extends until async_write() is complete
 	auto sp = std::make_shared<boost::beast::http::message<isRequest, Body, Fields>>(std::move(response));
 	auto self = shared_from_this();
-	
-	boost::beast::http::async_write(m_socket, *sp,
-			boost::asio::bind_executor(m_strand, [sp,self,this](boost::system::error_code ec, std::size_t bytesTransferred) {
-				if (sp->need_eof())
-					doClose();
-				
-				doRead();
-			}));
+
+	boost::beast::http::async_write(m_socket, *sp, *m_yield);
 }
 
 template void WebSession::send(boost::beast::http::response<boost::beast::http::empty_body>&& response);
 template void WebSession::send(boost::beast::http::response<boost::beast::http::string_body>&& response);
 
-
-void WebSession::handleRequest()
+bool WebSession::handleRequest()
 {
-	// Returns a bad request response
-    auto const bad_request =
-    [&](boost::beast::string_view why)
-    {
-        boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::bad_request, m_request.version()};
-        res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(boost::beast::http::field::content_type, "text/html");
-        res.keep_alive(m_request.keep_alive());
-        res.body() = why.to_string();
-        res.prepare_payload();
-        return res;
-    };
-
-    // Returns a not found response
-    auto const not_found =
-    [&](boost::beast::string_view target)
-    {
-        boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::not_found, m_request.version()};
-        res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(boost::beast::http::field::content_type, "text/html");
-        res.keep_alive(m_request.keep_alive());
-        res.body() = "The resource '" + target.to_string() + "' was not found.";
-        res.prepare_payload();
-        return res;
-    };
-
-    // Returns a server error response
-    auto const server_error =
-    [&](boost::beast::string_view what)
-    {
-        boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::internal_server_error, m_request.version()};
-        res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(boost::beast::http::field::content_type, "text/html");
-        res.keep_alive(m_request.keep_alive());
-        res.body() = "An error occurred: '" + what.to_string() + "'";
-        res.prepare_payload();
-        return res;
-    };
-
     BOOST_LOG_TRIVIAL(trace) << "HTTP request: " << m_request;
 
-    // Make sure we can handle the method
-    if( m_request.method() != boost::beast::http::verb::get &&
-        m_request.method() != boost::beast::http::verb::head &&
-		m_request.method() != boost::beast::http::verb::post)
+	boost::beast::http::response<boost::beast::http::string_body> response;
+
+	response.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+	response.set(boost::beast::http::field::content_type, "text/html");
+	response.keep_alive(m_request.keep_alive());
+	response.version(m_request.version());
+
+	try
 	{
-        return send(bad_request("Unknown HTTP method"));
+		// Request path must be absolute and not contain "..".
+		if( m_request.target().empty() ||
+			m_request.target()[0] != '/' ||
+			m_request.target().find("..") != boost::beast::string_view::npos)
+		{
+			throw WebErrors::bad_request("Illegal request URL");
+		}
+
+		// REST API call handling
+		// "Our" API requests
+		if (m_request.target().starts_with("/api/v1/"))
+		{
+			// TODO: HTTP digest auth
+			handleRESTCall();
+			return true;
+		}
+		else if (m_request.target().starts_with("/api/"))
+		{
+			// TODO: OctoPrint compat request
+			// NOTE: Authentication via API key
+		}
+
+		// TODO: HTTP digest auth
+
+		if (m_request.target() == "/websocket" && boost::beast::websocket::is_upgrade(m_request))
+		{
+			std::make_shared<WebsocketSession>(m_server, std::move(m_socket))->accept(m_request);
+			// We need to break out of the loop, there will be no more HTTP requests on this socket
+			return false;
+		}
+
+		// Static file handling
+		if (m_request.method() != boost::beast::http::verb::post &&
+			m_request.method() != boost::beast::http::verb::get)
+		{
+			throw WebErrors::bad_request("Unsupported HTTP method");
+		}
+
+		std::string path = path_cat(WEBROOT, m_request.target());
+		if (m_request.target().back() == '/')
+			path.append("index.html");
+
+		boost::beast::error_code ec;
+		boost::beast::http::basic_file_body<boost::beast::file_posix>::value_type body;
+		bool gzip_used = false;
+
+		if (m_request.at(boost::beast::http::field::accept_encoding).find("gzip") != boost::string_view::npos)
+		{
+			// Try a .gz file
+			body.open((path + ".gz").c_str(), boost::beast::file_mode::scan, ec);
+			if (!ec)
+				gzip_used = true;
+		}
+
+		if (!body.is_open())
+			body.open(path.c_str(), boost::beast::file_mode::scan, ec);
+
+		// Handle the case where the file doesn't exist
+		if(ec)
+			throw WebErrors::not_found(m_request.target().to_string());
+
+		// Cache the size since we need it after the move
+		auto const size = body.size();
+
+		if (m_request.method() == boost::beast::http::verb::head)
+		{
+			response.result(boost::beast::http::status::ok);
+			response.content_length(size);
+			response.set(boost::beast::http::field::content_type, mime_type(path));
+
+			send(std::move(response));
+		}
+		else
+		{
+			// Respond to GET request
+			boost::beast::http::response<boost::beast::http::file_body> res{
+					std::piecewise_construct,
+					std::make_tuple(std::move(body)),
+					std::make_tuple(boost::beast::http::status::ok, m_request.version())};
+			res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+			res.set(boost::beast::http::field::content_type, mime_type(path));
+			res.content_length(size);
+			res.keep_alive(m_request.keep_alive());
+
+			if (gzip_used)
+				res.set(boost::beast::http::field::content_encoding, "gzip");
+
+			send(std::move(res));
+		}
+	}
+	catch (const WebErrors::not_found& e)
+	{
+		response.result(boost::beast::http::status::not_found);
+		response.body() = e.what();
+		response.prepare_payload();
+
+		send(std::move(response));
+	}
+	catch (const WebErrors::bad_request& e)
+	{
+		response.result(boost::beast::http::status::bad_request);
+		response.body() = e.what();
+		response.prepare_payload();
+
+		send(std::move(response));
+	}
+	catch (const std::exception& e)
+	{
+		BOOST_LOG_TRIVIAL(error) << "Error executing REST request: " << e.what();
+
+		response.result(boost::beast::http::status::internal_server_error);
+		response.body() = e.what();
+		response.prepare_payload();
+
+		send(std::move(response));
 	}
 
-    // Request path must be absolute and not contain "..".
-    if( m_request.target().empty() ||
-        m_request.target()[0] != '/' ||
-        m_request.target().find("..") != boost::beast::string_view::npos)
-	{
-        return send(bad_request("Illegal request URL"));
-	}
-	
-	// REST API call handling
-	if (m_request.target().starts_with("/api/"))
-	{
-		try
-		{
-			return handleRESTCall();
-		}
-		catch (const WebErrors::not_found& e)
-		{
-			return send(not_found(e.what()));
-		}
-		catch (const WebErrors::bad_request& e)
-		{
-			return send(bad_request(e.what()));
-		}
-		catch (const std::exception& e)
-		{
-			BOOST_LOG_TRIVIAL(error) << "Error executing REST request: " << e.what();
-			return send(server_error(e.what()));
-		}
-	}
-	
-	// Static file handling
-	if (m_request.method() == boost::beast::http::verb::post)
-        return send(bad_request("Unknown HTTP-method"));
-	
-	std::string path = path_cat(WEBROOT, m_request.target());
-    if (m_request.target().back() == '/')
-        path.append("index.html");
-	
-	boost::beast::error_code ec;
-    boost::beast::http::file_body::value_type body;
-	
-    body.open(path.c_str(), boost::beast::file_mode::scan, ec);
-
-    // Handle the case where the file doesn't exist
-    if(ec == boost::system::errc::no_such_file_or_directory)
-        return send(not_found(m_request.target()));
-
-    // Handle an unknown error
-    if(ec)
-        return send(server_error(ec.message()));
-
-    // Cache the size since we need it after the move
-    auto const size = body.size();
-
-    // Respond to HEAD request
-    if(m_request.method() == boost::beast::http::verb::head)
-    {
-        boost::beast::http::response<boost::beast::http::empty_body> res{boost::beast::http::status::ok, m_request.version()};
-        res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(boost::beast::http::field::content_type, mime_type(path));
-        res.content_length(size);
-        res.keep_alive(m_request.keep_alive());
-        return send(std::move(res));
-    }
-
-    // Respond to GET request
-    boost::beast::http::response<boost::beast::http::file_body> res{
-        std::piecewise_construct,
-        std::make_tuple(std::move(body)),
-        std::make_tuple(boost::beast::http::status::ok, m_request.version())};
-    res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-    res.set(boost::beast::http::field::content_type, mime_type(path));
-    res.content_length(size);
-    res.keep_alive(m_request.keep_alive());
-	
-    send(std::move(res));
+	return true;
 }
+
 
 boost::beast::string_view WebSession::mime_type(boost::beast::string_view path)
 {

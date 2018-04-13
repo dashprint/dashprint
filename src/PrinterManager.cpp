@@ -103,15 +103,20 @@ void PrinterManager::addPrinter(std::shared_ptr<Printer> printer)
 		m_defaultPrinter = printer->uniqueName();
 
 	save();
+	m_printerListChangeSignal();
 }
 
-void PrinterManager::deletePrinter(const char* name)
+bool PrinterManager::deletePrinter(const char* name)
 {
 	std::unique_lock<std::mutex> lock(m_printersMutex);
 	auto it = m_printers.find(name);
 	
 	if (it != m_printers.end())
 		m_printers.erase(it);
+	else
+		return false;
+
+	BOOST_LOG_TRIVIAL(info) << "Printer " << name << "has been deleted";
 
 	if (name == m_defaultPrinter)
 	{
@@ -122,6 +127,9 @@ void PrinterManager::deletePrinter(const char* name)
 	}
 
 	save();
+	m_printerListChangeSignal();
+
+	return true;
 }
 
 std::set<std::string> PrinterManager::printerNames() const

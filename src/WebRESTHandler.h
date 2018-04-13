@@ -35,6 +35,11 @@ private:
 	void restPrinter(WebRESTContext& context);
 	void restSetupPrinter(WebRESTContext& context);
 	void restSetupNewPrinter(WebRESTContext& context);
+	void restDeletePrinter(WebRESTContext& context);
+
+	void restSubmitJob(WebRESTContext& context);
+	void restModifyJob(WebRESTContext& context);
+	void restGetJob(WebRESTContext& context);
 private:
 	typedef void (WebRESTHandler::*handler_t)(WebRESTContext& context);
 	

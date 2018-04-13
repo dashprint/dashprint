@@ -23,6 +23,8 @@
 #include <boost/signals2.hpp>
 #include <mutex>
 
+class PrintJob;
+
 class Printer
 {
 public:
@@ -70,14 +72,17 @@ public:
 	typedef std::function<void(const std::vector<std::string>& reply)> CommandCallback;
 	void sendCommand(const char* cmd, CommandCallback cb);
 
-	boost::signals2::connection connectStateChange(std::function<void(Printer::State newState)> cb) { return m_stateChangeSignal.connect(cb); }
+	boost::signals2::signal<void(State)>& stateChangeSignal() { return m_stateChangeSignal; }
 
 	struct Temperature
 	{
-		float current;
-		float target;
+		float current = 0;
+		float target = 0;
 	};
-	std::map<std::string, Temperature> getTemperatures() const;
+	typedef std::map<std::string, Temperature> Temperatures;
+	Temperatures getTemperatures() const;
+
+	boost::signals2::signal<void(std::map<std::string, float>)>& temperatureChangeSignal() { return m_temperatureChangeSignal; }
 
 	struct PrintArea
 	{
@@ -89,6 +94,13 @@ public:
 	};
 	const PrintArea& printArea() const { return m_printArea; }
 	void setPrintArea(PrintArea area);
+
+	class job_exists : public std::runtime_error { using std::runtime_error::runtime_error; };
+
+	void setPrintJob(std::shared_ptr<PrintJob> job);
+	std::shared_ptr<PrintJob> printJob() const;
+	bool hasPrintJob() const;
+	boost::signals2::signal<void(bool)>& hasPrintJobChangeSignal() { return m_hasJobChangeSignal; }
 private:
 	void setState(State state);
 
@@ -111,6 +123,12 @@ private:
 	static void kvParse(const std::string& line, std::map<std::string,std::string>& values);
 
 	void getTemperature();
+	void parseTemperatures(const std::string& line);
+
+	void processCommandEffects(const std::string& line);
+	void processTargetTempSetting(const char* elem, const std::string& line);
+
+	static unsigned int checksum(std::string cmd);
 private:
 	std::string m_uniqueName; // As used in REST API URLs
 	std::string m_devicePath, m_name;
@@ -128,20 +146,27 @@ private:
 	std::vector<std::string> m_replyLines;
 	std::queue<PendingCommand> m_commandQueue;
 
-	bool m_executingCommand = false;
-	char m_commandBuffer[256];
+	std::string m_executingCommand;
+	std::string m_commandBuffer;
 	boost::asio::streambuf m_streamBuf;
 
 	boost::signals2::signal<void(State)> m_stateChangeSignal;
+	boost::signals2::signal<void(std::map<std::string, float>)> m_temperatureChangeSignal;
+
 	// M115 result
 	std::map<std::string, std::string> m_baseParameters;
 
 	std::string m_apiKey;
-	std::map<std::string, Temperature> m_temperatures;
+	Temperatures m_temperatures;
 	mutable std::mutex m_temperaturesMutex;
 
 	PrintArea m_printArea;
 	std::chrono::time_point<std::chrono::steady_clock> m_lastIncomingData;
+	int m_nextLineNo = 1;
+
+	std::shared_ptr<PrintJob> m_printJob;
+	mutable std::mutex m_printJobMutex;
+	boost::signals2::signal<void(bool)> m_hasJobChangeSignal;
 };
 
 #endif /* PRINTER_H */

@@ -12,17 +12,20 @@
  */
 
 #include "Printer.h"
+#include "PrintJob.h"
 #include <iostream>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <cstring>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 
 #include <ctype.h>
+#include <termios.h>
 
 static const boost::posix_time::seconds RECONNECT_DELAY(5);
 static const int DATA_TIMEOUT = 5000;
@@ -147,16 +150,16 @@ void Printer::reset()
 	m_serial.close(ec);
 	m_reconnectTimer.cancel(ec);
 	m_timeoutTimer.cancel(ec);
-	m_executingCommand = false;
+	m_executingCommand.clear();
 
 	m_replyLines.clear();
 	while (!m_commandQueue.empty())
 	{
 		// m_replyLines is empty, which will indicate failure
-		m_commandQueue.front().callback(m_replyLines);
+		if (m_commandQueue.front().callback)
+			m_commandQueue.front().callback(m_replyLines);
 		m_commandQueue.pop();
 	}
-	m_executingCommand = false;
 }
 
 void Printer::getTemperature()
@@ -167,24 +170,7 @@ void Printer::getTemperature()
 	sendCommand("M105", [=](const std::vector<std::string>& response) {
 		if (!response.empty())
 		{
-			std::map<std::string, std::string> values;
-			kvParse(response[response.size()-1], values);
-
-			for (auto it : values)
-			{
-				Temperature temp;
-				ssize_t slash;
-
-				slash = it.second.find('/');
-				temp.current = std::stof(it.second);
-
-				if (slash != std::string::npos)
-					temp.target = std::stof(it.second.substr(slash+1));
-
-				m_temperaturesMutex.lock();
-				m_temperatures.emplace(it.first, temp);
-				m_temperaturesMutex.unlock();
-			}
+			parseTemperatures(response[response.size()-1]);
 		}
 
 		m_temperatureTimer.expires_from_now(boost::posix_time::seconds(5));
@@ -193,6 +179,53 @@ void Printer::getTemperature()
 				getTemperature();
 		});
 	});
+}
+
+void Printer::parseTemperatures(const std::string& line)
+{
+	std::map<std::string, std::string> values;
+	std::map<std::string, float> changes;
+
+	kvParse(line, values);
+
+	std::unique_lock<std::mutex> lock(m_temperaturesMutex);
+	for (auto it : values)
+	{
+		Temperature& temp = m_temperatures[it.first];
+		ssize_t slash;
+
+		try
+		{
+			float value;
+
+			slash = it.second.find('/');
+			value = std::stof(it.second);
+
+			if (value != temp.current)
+			{
+				temp.current = value;
+				changes.emplace(it.first + ".current", value);
+			}
+
+			if (slash != std::string::npos)
+			{
+				value = std::stof(it.second.substr(slash + 1));
+
+				if (value != temp.target)
+				{
+					temp.target = value;
+					changes.emplace(it.first + ".target", value);
+				}
+			}
+		}
+		catch (const std::exception& e)
+		{
+			BOOST_LOG_TRIVIAL(warning) << "Failed to parse temperatures on " << m_uniqueName << ": " << line;
+		}
+	}
+
+	if (!changes.empty())
+		m_temperatureChangeSignal(changes);
 }
 
 void Printer::setState(State state)
@@ -242,23 +275,42 @@ void Printer::doConnect()
 		m_lastIncomingData = std::chrono::steady_clock::now();
 		setupTimeoutCheck();
 
-		// Get printer information
-		sendCommand("M115", [=](const std::vector<std::string>& reply) {
-			if (reply.size() >= 2)
-				kvParse(reply[reply.size() - 2], m_baseParameters);
+		m_reconnectTimer.expires_from_now(boost::posix_time::seconds(1));
+		m_reconnectTimer.async_wait([=](const boost::system::error_code& ec) {
+			// This is a workaround that helps get rid of trash in the input buffer,
+			// but so far things work OK without it.
+			// ::usleep(10000);
+			// ::tcflush(m_serial.native_handle(), TCIOFLUSH);
 
-			if (!reply.empty())
-			{
-				setState(State::Connected);
-				getTemperature();
-			}
+			// Issue a 'sleep for 0ms' to stabilize communications.
+			// Based on trial-error, it seems to be necessary to do a useless command first after opening the port
+			// (USB TTL hardware tends to be quite shoddy), before issuing commands whose results we actually make use of.
+			// sendCommand("G4 P0", nullptr);
+			sendCommand("M110 N0", nullptr);
+			m_nextLineNo = 1;
+
+			// Get printer information
+			sendCommand("M115", [=](const std::vector<std::string>& reply) {
+				if (reply.size() >= 2)
+				{
+					kvParse(reply[reply.size() - 2], m_baseParameters);
+					for (auto it = m_baseParameters.begin(); it != m_baseParameters.end(); it++)
+						std::cout << it->first << " -> " << it->second << std::endl;
+				}
+
+				if (!reply.empty())
+				{
+					setState(State::Connected);
+					getTemperature();
+				}
+			});
+
+			doWrite();
 		});
-
-		doWrite();
 	}
 	catch (const std::exception &e)
 	{
-		BOOST_LOG_TRIVIAL(error) << "Failed to open serial port " << m_devicePath << std::endl;
+		BOOST_LOG_TRIVIAL(error) << "Failed to open serial port " << m_devicePath;
 
 		// Retry in a short while
 		m_reconnectTimer.expires_from_now(RECONNECT_DELAY);
@@ -330,40 +382,135 @@ void Printer::readDone(const boost::system::error_code& ec)
 
 	m_lastIncomingData = std::chrono::steady_clock::now();
 
-	BOOST_LOG_TRIVIAL(trace) << "Read on printer " << m_uniqueName << ": " << line;
+	BOOST_LOG_TRIVIAL(debug) << "Read on printer " << m_uniqueName << ": " << line;
 
 	m_replyLines.push_back(line);
 
+	// This is the final line
 	if (boost::starts_with(line, "ok ") || line == "ok")
 	{
-		m_commandQueue.front().callback(m_replyLines);
+		// Handle command re-sending
+		int resendLine = -1;
+		for (const std::string& line : m_replyLines)
+		{
+			if (boost::starts_with(line, "Resend:"))
+			{
+				std::string lineNo = line.substr(7);
+				boost::algorithm::trim(lineNo);
+
+				try
+				{
+					resendLine = std::stoi(lineNo);
+				}
+				catch (const std::exception& e)
+				{
+					BOOST_LOG_TRIVIAL(debug) << "Failed to parse resend line: " << e.what();
+				}
+
+				break;
+			}
+		}
+
+		// Indicates we've just executed an M110 command not present in the queue
+		if (m_nextLineNo == 0)
+		{
+			m_nextLineNo = 1;
+		}
+		// If the resend is issued for a line we don't have, pass the error on to the requester
+		else if (resendLine != m_nextLineNo-1)
+		{
+			if (!m_commandQueue.empty())
+			{
+				auto cb = m_commandQueue.front().callback;
+				if (cb)
+					cb(m_replyLines);
+				m_commandQueue.pop();
+			}
+		}
+
 		m_replyLines.clear();
-		m_executingCommand = false;
+		m_executingCommand.clear();
 
 		doWrite();
+	}
+	else if (m_executingCommand == "M190" || m_executingCommand == "M109")
+	{
+		parseTemperatures(line);
 	}
 
 	doRead();
 }
 
+static std::string extractCommandCode(const std::string& cmd)
+{
+	auto pos = cmd.find(' ');
+	if (pos != std::string::npos)
+		return cmd.substr(0, pos);
+	return cmd;
+}
+
 void Printer::doWrite()
 {
-	if (m_executingCommand || m_commandQueue.empty())
+	if (!m_executingCommand.empty() || m_commandQueue.empty())
 		return;
 
-	m_executingCommand = true;
 	m_replyLines.clear();
 
-	const PendingCommand& pc = m_commandQueue.front();
-	const size_t length = pc.command.length() + 1;
+	if (m_nextLineNo < 5)
+	{
+		const PendingCommand &pc = m_commandQueue.front();
+		std::stringstream ss;
 
-	std::strcpy(m_commandBuffer, pc.command.c_str());
-	std::strcat(m_commandBuffer, "\n");
+		m_executingCommand = extractCommandCode(pc.command);
+		processCommandEffects(pc.command);
 
-	BOOST_LOG_TRIVIAL(trace) << "Write on printer " << m_uniqueName << ": " << pc.command;
+		// If this is not a line-setting command
+		const bool useLineNumber = m_executingCommand != "M110";
+		if (useLineNumber)
+		{
+			// Prepend next line number
+			ss << 'N' << m_nextLineNo++ << ' ';
+		}
 
-	boost::asio::async_write(m_serial, boost::asio::buffer(m_commandBuffer, length),
+		ss << pc.command;
+
+		if (useLineNumber)
+		{
+			ss << ' ';
+
+			unsigned int cs = checksum(ss.str());
+			ss << '*' << cs;
+		}
+
+		ss << '\n';
+
+		m_commandBuffer = ss.str();
+	}
+	else
+	{
+		// Reset the line counter
+		m_commandBuffer = "M110 N0\n";
+		m_executingCommand = "M110";
+		m_nextLineNo = 0; // Will bump to 1 in readDone()
+	}
+
+	BOOST_LOG_TRIVIAL(debug) << "Write on printer " << m_uniqueName << ": " << m_commandBuffer.substr(0, m_commandBuffer.length()-1);
+
+	boost::asio::async_write(m_serial, boost::asio::buffer(m_commandBuffer.c_str(), m_commandBuffer.length()),
 		std::bind(&Printer::writeDone, this, std::placeholders::_1));
+
+	// Reset timeout calculation
+	m_lastIncomingData = std::chrono::steady_clock::now();
+}
+
+unsigned int Printer::checksum(std::string cmd)
+{
+	unsigned int cs = 0;
+
+	for (int i = 0; i < cmd.length() && cmd[i] != '*'; i++)
+		cs ^= unsigned(cmd[i]);
+
+	return cs & 0xff;
 }
 
 void Printer::writeDone(const boost::system::error_code& ec)
@@ -375,7 +522,45 @@ void Printer::writeDone(const boost::system::error_code& ec)
 	}
 
 	// Now we wait for the reply to arrive.
-	// Only then we set m_executingCommand to false.
+	// Only then we clear m_executingCommand.
+}
+
+void Printer::processCommandEffects(const std::string& line)
+{
+	if (m_executingCommand == "M104" || m_executingCommand == "M109")
+	{
+		// Extruder target temp change
+		if (line.length() > 6 && line[5] == 'S')
+			Printer::processTargetTempSetting("T", line);
+	}
+	else if (m_executingCommand == "M140" || m_executingCommand == "M190")
+	{
+		// Heatbed target temp change
+		if (line.length() > 6 && line[5] == 'S')
+			Printer::processTargetTempSetting("B", line);
+	}
+}
+
+void Printer::processTargetTempSetting(const char* elem, const std::string& line)
+{
+	std::unique_lock<std::mutex> lock(m_temperaturesMutex);
+
+	try
+	{
+		Temperature& temp = m_temperatures[elem];
+		float value = std::stof(line.substr(6));
+
+		if (value != temp.target)
+		{
+			temp.target = value;
+			m_temperatureChangeSignal({ { std::string(elem) + ".target", value } });
+		}
+	}
+	catch (const std::exception& e)
+	{
+		BOOST_LOG_TRIVIAL(warning) << "Failed to parse target temp for command: " << line;
+	}
+
 }
 
 void Printer::kvParse(const std::string& line, std::map<std::string,std::string>& values)
@@ -390,10 +575,15 @@ void Printer::kvParse(const std::string& line, std::map<std::string,std::string>
 
 		// Found the beginning of the key
 		while (x > 0 && !isspace(line[x]))
+		{
+			if (line[x] == ':')
+				goto ignore;
 			x--;
+		}
 
 		keyPositions.push_back(std::make_pair(x+1, pos));
 
+ignore:
 		pos++;
 	}
 
@@ -426,6 +616,37 @@ void Printer::regenerateApiKey()
 
 std::map<std::string, Printer::Temperature> Printer::getTemperatures() const
 {
-	std::unique_lock<std::mutex> lock(m_temperaturesMutex);
+	std::lock_guard<std::mutex> lock(m_temperaturesMutex);
 	return m_temperatures;
+}
+
+std::shared_ptr<PrintJob> Printer::printJob() const
+{
+	std::lock_guard<std::mutex> lock(m_printJobMutex);
+	return m_printJob;
+}
+
+bool Printer::hasPrintJob() const
+{
+	std::lock_guard<std::mutex> lock(m_printJobMutex);
+	return !!m_printJob;
+}
+
+void Printer::setPrintJob(std::shared_ptr<PrintJob> job)
+{
+	std::lock_guard<std::mutex> lock(m_printJobMutex);
+
+	if (job)
+	{
+		if (m_printJob && (m_printJob->state() == PrintJob::State::Running || m_printJob->state() == PrintJob::State::Paused))
+			throw job_exists("Printer already has a print job");
+
+		m_printJob = job;
+		m_hasJobChangeSignal(true);
+	}
+	else if (m_printJob)
+	{
+		m_printJob.reset();
+		m_hasJobChangeSignal(false);
+	}
 }

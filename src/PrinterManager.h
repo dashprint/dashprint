@@ -19,6 +19,7 @@
 #include <set>
 #include <string>
 #include <boost/asio.hpp>
+#include <boost/signals2.hpp>
 #include "Printer.h"
 
 class PrinterManager
@@ -32,13 +33,14 @@ public:
 	std::shared_ptr<Printer> newPrinter();
 	std::shared_ptr<Printer> printer(const char* name);
 	void addPrinter(std::shared_ptr<Printer> printer);
-	void deletePrinter(const char* name);
+	bool deletePrinter(const char* name);
 	std::set<std::string> printerNames() const;
 
 	void setDefaultPrinter(const char* name);
 	const char* defaultPrinter();
 
 	void saveSettings();
+	boost::signals2::signal<void()>& printerListChangeSignal() { return m_printerListChangeSignal; }
 private:
 	void save();
 	void load();
@@ -48,6 +50,8 @@ private:
 	std::unordered_map<std::string, std::shared_ptr<Printer>> m_printers;
 	mutable std::mutex m_printersMutex;
 	std::string m_defaultPrinter;
+
+	boost::signals2::signal<void()> m_printerListChangeSignal;
 };
 
 #endif /* PRINTERMANAGER_H */

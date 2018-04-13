@@ -17,6 +17,7 @@
 #include <boost/beast.hpp>
 #include <memory>
 #include <stdexcept>
+#include <boost/asio/spawn.hpp>
 
 class WebServer;
 
@@ -30,20 +31,34 @@ public:
 	WebServer* webServer() { return m_server; }
 private:
 	void doRead();
-	void onRead(boost::system::error_code ec, std::size_t bytesTransferred);
 	void doClose();
-	void handleRequest();
+	std::string processLargeBody(uint64_t length);
+	bool handleRequest();
+	bool handleAuthentication();
+	bool handleExpect100Continue();
+	void sendWWWAuthenticate();
 	
 	void handleRESTCall();
 	static boost::beast::string_view mime_type(boost::beast::string_view path);
+	static std::string cachePath();
+	static void parseAuthenticationKV(std::string in, std::map<std::string,std::string>& out);
+
+	// Returns true if given HTTP request target doesn't use standard authentication
+	// but rather an API key passed in HTTP headers.
+	static bool usesOctoPrintApiKey(boost::beast::string_view url);
 protected:
 	template<bool isRequest, class Body, class Fields> void send(boost::beast::http::message<isRequest, Body, Fields>&& response);
+	const std::string& bodyFile() const { return m_bodyFile; }
 private:
 	WebServer* m_server;
 	boost::asio::ip::tcp::socket m_socket;
+	std::unique_ptr<boost::beast::http::request_parser<boost::beast::http::string_body>> m_requestParser;
 	boost::beast::http::request<boost::beast::http::string_body> m_request;
 	boost::beast::flat_buffer m_buffer;
 	boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
+	boost::optional<boost::asio::yield_context> m_yield;
+
+	std::string m_bodyFile;
 	
 	friend class WebRESTHandler;
 	friend class WebRESTContext;

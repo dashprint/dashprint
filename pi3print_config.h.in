@@ -1,7 +1,0 @@
-#ifndef PI3PRINT_CONFIG_H_IN
-#define PI3PRINT_CONFIG_H_IN
-
-#define WEBROOT "${CMAKE_INSTALL_PREFIX}/share/pi3print/web/"
-
-#endif /* PI3PRINT_CONFIG_H_IN */
-
