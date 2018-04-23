@@ -40,6 +40,9 @@ private:
 	void restSubmitJob(WebRESTContext& context);
 	void restModifyJob(WebRESTContext& context);
 	void restGetJob(WebRESTContext& context);
+
+	void restGetPrinterTemperatures(WebRESTContext& context);
+	void restSetPrinterTemperatures(WebRESTContext& context);
 private:
 	typedef void (WebRESTHandler::*handler_t)(WebRESTContext& context);
 	

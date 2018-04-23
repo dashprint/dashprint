@@ -19,24 +19,35 @@
   </clr-header>
 
   <div class="content-container">
-    <main *ngIf="printers && printers.length" class="content-area">
-        <h2>Printer name here</h2>
-        
-        <clr-dropdown [clrCloseMenuOnItemClick]="true">
+
+    <main *ngIf="selectedPrinter" class="content-area">
+
+      <div class="printer-header">
+        <clr-dropdown [clrCloseMenuOnItemClick]="true" class="printer-switch">
         <button class="btn btn-link" clrDropdownTrigger>
           Switch printer
           <clr-icon shape="caret down"></clr-icon>
         </button>
         <clr-dropdown-menu [clrPosition]="'bottom-right'">
           <h4 class="dropdown-header">Configured printers</h4>
-          <button type="button" class="dropdown-item" *ngFor="let printer of printers">{{ printer.name }}</button>
+          <button type="button" class="dropdown-item" *ngFor="let printer of printers" (click)="switchPrinter(printer)">{{ printer.name }}</button>
           <button *ngIf="!printers" type="button" class="dropdown-item disabled">No printers</button>
           <div class="dropdown-divider"></div>
           <button type="button" class="dropdown-item" (click)="addPrinter()">Add printer...</button>
         </clr-dropdown-menu>
       </clr-dropdown>
-        
+
+      <h2>{{ selectedPrinter.name }}</h2>
+
+      <div *ngIf="temperatures" class="printer-temperatures">
+        <p *ngIf="temperatures.T">Tool: {{ temperatures.T.current.toFixed(1) }} C</p>
+        <p *ngIf="temperatures.B">Bed: {{ temperatures.B.current.toFixed(1) }} C</p>
+      </div>
+
+      </div>
     </main>
+
+
     <main *ngIf="!printers || !printers.length" class="content-area no-printers">
       <h2>No printers</h2>
       <p><button type="button" class="btn btn-primary" (click)="addPrinter()">Add printer...</button></p>

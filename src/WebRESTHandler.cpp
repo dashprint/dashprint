@@ -68,12 +68,17 @@ WebRESTHandler::WebRESTHandler()
 		HandlerMapping{ std::regex("/v1/printers/discover"), method::post, &WebRESTHandler::restPrintersDiscover },
 		HandlerMapping{ std::regex("/v1/printers"), method::get, &WebRESTHandler::restPrinters },
 		HandlerMapping{ std::regex("/v1/printers"), method::post, &WebRESTHandler::restSetupNewPrinter },
+
 		HandlerMapping{ std::regex("/v1/printers/([^/]+)"), method::put, &WebRESTHandler::restSetupPrinter },
 		HandlerMapping{ std::regex("/v1/printers/([^/]+)"), method::get, &WebRESTHandler::restPrinter },
 		HandlerMapping{ std::regex("/v1/printers/([^/]+)"), method::delete_, &WebRESTHandler::restDeletePrinter },
+
 		HandlerMapping{ std::regex("/v1/printers/([^/]+)/job"), method::post, &WebRESTHandler::restSubmitJob },
 		HandlerMapping{ std::regex("/v1/printers/([^/]+)/job"), method::put, &WebRESTHandler::restModifyJob },
 		HandlerMapping{ std::regex("/v1/printers/([^/]+)/job"), method::get, &WebRESTHandler::restGetJob },
+
+		HandlerMapping{ std::regex("/v1/printers/([^/]+)/temperatures"), method::put, &WebRESTHandler::restSetPrinterTemperatures },
+		HandlerMapping{ std::regex("/v1/printers/([^/]+)/temperatures"), method::get, &WebRESTHandler::restGetPrinterTemperatures },
 				
 		// OctoPrint emu API
 	});
@@ -284,6 +289,37 @@ void WebRESTHandler::restModifyJob(WebRESTContext& context)
 void WebRESTHandler::restGetJob(WebRESTContext& context)
 {
 
+}
+
+void WebRESTHandler::restGetPrinterTemperatures(WebRESTContext& context)
+{
+	std::string name = context.match()[1];
+
+	std::shared_ptr<Printer> printer = context.printerManager()->printer(name.c_str());
+	if (!printer)
+		throw WebErrors::not_found("Printer not found");
+
+	nlohmann::json result = nlohmann::json::object();
+	Printer::Temperatures temps = printer->getTemperatures();
+
+	for (auto it = temps.begin(); it != temps.end(); it++)
+	{
+		result[it->first] = {
+				{ "current", it->second.current },
+				{ "target", it->second.target }
+		};
+	}
+
+	context.send(result, WebRESTContext::http_status::ok);
+}
+
+void WebRESTHandler::restSetPrinterTemperatures(WebRESTContext& context)
+{
+	std::string name = context.match()[1];
+
+	std::shared_ptr<Printer> printer = context.printerManager()->printer(name.c_str());
+	if (!printer)
+		throw WebErrors::not_found("Printer not found");
 }
 
 void WebRESTContext::send(http_status status, const std::map<std::string,std::string>& headers)

@@ -28,7 +28,7 @@ export class GLView {
 
         this.camera.xAngle = 20;
         this.camera.yAngle = 20;
-        this.camera.distance = 2;
+        this.camera.distance = 2.5;
         this.camera.onCameraChange = () => this.requestRender();
     }
 

@@ -28,7 +28,8 @@
 #include <termios.h>
 
 static const boost::posix_time::seconds RECONNECT_DELAY(5);
-static const int DATA_TIMEOUT = 5000;
+static constexpr int DATA_TIMEOUT = 5000;
+static constexpr int MAX_LINENO = 10000;
 
 Printer::Printer(boost::asio::io_service &io)
 		: m_io(io), m_serial(io), m_reconnectTimer(io), m_timeoutTimer(io), m_temperatureTimer(io)
@@ -225,7 +226,9 @@ void Printer::parseTemperatures(const std::string& line)
 	}
 
 	if (!changes.empty())
+	{
 		m_temperatureChangeSignal(changes);
+	}
 }
 
 void Printer::setState(State state)
@@ -261,6 +264,7 @@ void Printer::doConnect()
 		m_serial.open(m_devicePath.c_str());
 
 		::ioctl(m_serial.native_handle(), TIOCEXCL);
+		setNoResetOnReopen();
 
 		m_serial.set_option(boost::asio::serial_port_base::baud_rate(m_baudRate));
 		m_serial.set_option(boost::asio::serial_port_base::character_size(8));
@@ -318,6 +322,21 @@ void Printer::doConnect()
 			if (!ec)
 				doConnect();
 		});
+	}
+}
+
+void Printer::setNoResetOnReopen()
+{
+	struct termios tos;
+	int fd = m_serial.native_handle();
+
+	if (::tcgetattr(fd, &tos) == 0)
+	{
+		if (tos.c_cflag & HUPCL)
+		{
+			tos.c_cflag &= ~HUPCL;
+			::tcsetattr(fd, TCSANOW, &tos);
+		}
 	}
 }
 
@@ -456,7 +475,7 @@ void Printer::doWrite()
 
 	m_replyLines.clear();
 
-	if (m_nextLineNo < 5)
+	if (m_nextLineNo < MAX_LINENO)
 	{
 		const PendingCommand &pc = m_commandQueue.front();
 		std::stringstream ss;
@@ -574,7 +593,7 @@ void Printer::kvParse(const std::string& line, std::map<std::string,std::string>
 		int x = pos - 1;
 
 		// Found the beginning of the key
-		while (x > 0 && !isspace(line[x]))
+		while (x >= 0 && !isspace(line[x]))
 		{
 			if (line[x] == ':')
 				goto ignore;

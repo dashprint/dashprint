@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Printer, DiscoveredPrinter } from './Printer';
+import {Printer, DiscoveredPrinter, PrinterTemperature, PrinterTemperatures} from './Printer';
 import { Observable } from 'rxjs/Observable';
 import { of } from 'rxjs/observable/of';
 import 'rxjs/add/operator/map';
@@ -15,19 +15,19 @@ export class PrintService {
           let rv: Printer[] = [];
 
           Object.keys(data).forEach(key => {
-              rv.push(new class Printer {
-                  id = key;
-                  name = data[key].name;
-                  defaultPrinter = data[key]['default'];
-                  apiKey = data[key].api_key;
-                  devicePath = data[key].device_path;
-                  baudRate = data[key].baud_rate;
-                  stopped = data[key].stopped;
-                  connected = data[key].connected;
-                  width = data[key].width;
-                  height = data[key].height;
-                  depth = data[key].depth;
-              });
+              let printer = new Printer();
+              printer.id = key;
+              printer.name = data[key].name;
+              printer.defaultPrinter = data[key]['default'];
+              printer.apiKey = data[key].api_key;
+              printer.devicePath = data[key].device_path;
+              printer.baudRate = data[key].baud_rate;
+              printer.stopped = data[key].stopped;
+              printer.connected = data[key].connected;
+              printer.width = data[key].width;
+              printer.height = data[key].height;
+              printer.depth = data[key].depth;
+              rv.push(printer);
           });
 
           return rv;
@@ -56,6 +56,10 @@ export class PrintService {
               observer.complete();
           });
       });
+  }
+
+  getPrinterTemperatures(printer: Printer) : Observable<PrinterTemperatures> {
+      return this.http.get<PrinterTemperatures>('/api/v1/printers/'+printer.id+'/temperatures');
   }
 
 }

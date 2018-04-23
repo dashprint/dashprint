@@ -16,23 +16,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f4416363-d98a-40e3-83da-700513162a17" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/Toolchain-rpi.cmake" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/PrintJob.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/PrintJob.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/WebsocketSession.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/WebsocketSession.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/file_body_posix.ipp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/PrinterTest.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/web/src/app/websocket.service.spec.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/web/src/app/websocket.service.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pi3print_config.h.in" beforeDir="false" afterPath="$PROJECT_DIR$/dashprint_config.h.in" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Printer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/Printer.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/Printer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/Printer.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/PrinterManager.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/PrinterManager.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/PrinterManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/PrinterManager.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/WebRESTHandler.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/WebRESTHandler.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/WebRESTHandler.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/WebRESTHandler.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/WebSession.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/WebSession.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/WebSession.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/WebSession.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/WebsocketSession.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/WebsocketSession.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/src/app/Printer.ts" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/app/Printer.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/src/app/app.component.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/app/app.component.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/src/app/app.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/app/app.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/src/app/app.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/app/app.component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/src/app/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/app/app.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/src/app/print.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/app/print.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/src/app/webgl/GLView.ts" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/app/webgl/GLView.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/src/app/webgl/stlmodel.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/app/webgl/stlmodel.service.ts" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <ignored path="$PROJECT_DIR$/CMakeFiles/" />
@@ -46,54 +48,65 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="WebSession.cpp" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/WebSession.cpp">
+      <file leaf-file-name="app.component.ts" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/web/src/app/app.component.ts">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="733">
-              <caret line="205" column="34" selection-start-line="205" selection-start-column="34" selection-end-line="205" selection-end-column="34" />
+            <state relative-caret-position="211">
+              <caret line="79" column="19" selection-start-line="79" selection-start-column="19" selection-end-line="79" selection-end-column="19" />
               <folding>
-                <element signature="e#279#311#0" expanded="true" />
-                <element signature="e#1574#1817#0" expanded="true" />
-                <element signature="e#3239#3281#0" expanded="true" />
+                <element signature="e#0#79#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="WebServer.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/WebServer.cpp">
-          <provider selected="true" editor-type-id="text-editor" />
-        </entry>
-      </file>
-      <file leaf-file-name="WebRESTHandler.h" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/WebRESTHandler.h">
+      <file leaf-file-name="app.component.html" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/web/src/app/app.component.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="816">
-              <caret line="50" column="6" lean-forward="true" selection-start-line="50" selection-start-column="6" selection-end-line="50" selection-end-column="6" />
+            <state relative-caret-position="182">
+              <caret line="22" column="55" selection-start-line="22" selection-start-column="55" selection-end-line="22" selection-end-column="55" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="WebRESTHandler.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/WebRESTHandler.cpp">
+      <file leaf-file-name="websocket.service.ts" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/web/src/app/websocket.service.ts">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="533">
-              <caret line="298" selection-start-line="298" selection-end-line="298" />
+            <state relative-caret-position="364">
+              <caret line="55" column="19" selection-start-line="55" selection-start-column="19" selection-end-line="55" selection-end-column="19" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="print.service.ts" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/web/src/app/print.service.ts">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="840">
+              <caret line="65" selection-start-line="65" selection-end-line="65" />
               <folding>
-                <element signature="e#282#309#0" expanded="true" />
+                <element signature="e#0#43#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="util.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/util.cpp">
+      <file leaf-file-name="WebsocketSession.cpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/WebsocketSession.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="535">
-              <caret line="44" column="1" lean-forward="true" selection-start-line="44" selection-start-column="1" selection-end-line="44" selection-end-column="1" />
+            <state relative-caret-position="172">
+              <caret line="107" column="113" selection-start-line="107" selection-start-column="113" selection-end-line="107" selection-end-column="113" />
               <folding>
-                <element signature="e#39#57#0" expanded="true" />
+                <element signature="e#39#68#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="GLView.ts" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/web/src/app/webgl/GLView.ts">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="249">
+              <caret line="157" column="42" selection-start-line="157" selection-start-column="42" selection-end-line="157" selection-end-column="42" />
             </state>
           </provider>
         </entry>
@@ -101,21 +114,20 @@
       <file leaf-file-name="Printer.cpp" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/Printer.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="323">
-              <caret line="19" selection-start-line="19" selection-end-line="19" selection-end-column="47" />
+            <state relative-caret-position="480">
+              <caret line="229" selection-start-line="229" selection-end-line="229" />
+              <folding>
+                <element signature="e#276#296#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="WebSession.h" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/WebSession.h">
+      <file leaf-file-name="PrinterTest.cpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/test/PrinterTest.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="697">
-              <caret line="41" column="72" lean-forward="true" selection-start-line="41" selection-start-column="47" selection-end-line="41" selection-end-column="72" />
-              <folding>
-                <element signature="e#318#343#0" expanded="true" />
-                <element signature="e#867#909#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="252">
+              <caret line="18" selection-start-line="18" selection-end-line="18" />
             </state>
           </provider>
         </entry>
@@ -123,19 +135,19 @@
       <file leaf-file-name="CMakeLists.txt" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="500">
-              <caret line="121" column="63" selection-start-line="121" selection-start-column="63" selection-end-line="121" selection-end-column="63" />
+            <state relative-caret-position="315">
+              <caret line="155" column="50" selection-start-line="155" selection-start-column="50" selection-end-line="155" selection-end-column="50" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="main.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main.cpp">
+      <file leaf-file-name="Printer.h" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/Printer.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1258">
-              <caret line="74" column="14" lean-forward="true" selection-start-line="74" selection-start-column="14" selection-end-line="74" selection-end-column="14" />
+            <state relative-caret-position="571">
+              <caret line="112" column="18" selection-start-line="112" selection-start-column="18" selection-end-line="112" selection-end-column="18" />
               <folding>
-                <element signature="e#0#19#0" expanded="true" />
+                <element signature="e#309#326#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -153,9 +165,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>m_uniqueName</find>
-      <find>doConnec</find>
-      <find>opening se</find>
       <find>doconn</find>
       <find>m_timeoutTimer</find>
       <find>file_win32</find>
@@ -168,7 +177,6 @@
       <find>doRead</find>
       <find>asio</find>
       <find>dynamic_buffer</find>
-      <find>websock</find>
       <find>operator[</find>
       <find>reference</find>
       <find>is_array</find>
@@ -183,6 +191,10 @@
       <find>make_fcontext</find>
       <find>m_request</find>
       <find>m_yield</find>
+      <find>websock</find>
+      <find>kvpars</find>
+      <find>kvparse</find>
+      <find>parseTemperatures</find>
     </findStrings>
     <replaceStrings>
       <replace>0.5</replace>
@@ -199,10 +211,7 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/web/src/app/app.component.css" />
-        <option value="$PROJECT_DIR$/web/src/app/app.component.html" />
         <option value="$PROJECT_DIR$/web/src/app/Modal.ts" />
-        <option value="$PROJECT_DIR$/web/src/app/app.component.ts" />
         <option value="$PROJECT_DIR$/web/src/app/modal.service.ts" />
         <option value="$PROJECT_DIR$/web/src/index.html" />
         <option value="$PROJECT_DIR$/web/src/app/custom-min-validator.directive.ts" />
@@ -212,18 +221,13 @@
         <option value="$PROJECT_DIR$/web/src/file-loader.d.ts" />
         <option value="$PROJECT_DIR$/web/src/app/webgl/STLModel.worker.ts" />
         <option value="$PROJECT_DIR$/web/src/tsconfig.app.json" />
-        <option value="$PROJECT_DIR$/web/src/app/app.module.ts" />
         <option value="$PROJECT_DIR$/web/src/app/webgl/STLModel.ts" />
         <option value="$PROJECT_DIR$/web/src/assets/workers/STLModel.worker.js" />
         <option value="$PROJECT_DIR$/web/src/app/webgl/Camera.ts" />
         <option value="$PROJECT_DIR$/web/src/app/webgl/Lines.ts" />
-        <option value="$PROJECT_DIR$/web/src/app/webgl/stlmodel.service.ts" />
         <option value="$PROJECT_DIR$/web/src/app/webgl/Triangles.ts" />
         <option value="$PROJECT_DIR$/web/src/app/webgl/Renderable.ts" />
-        <option value="$PROJECT_DIR$/web/src/app/webgl/GLView.ts" />
         <option value="$PROJECT_DIR$/web/src/app/webgl/PrinterView.ts" />
-        <option value="$PROJECT_DIR$/web/src/app/Printer.ts" />
-        <option value="$PROJECT_DIR$/web/src/app/print.service.ts" />
         <option value="$PROJECT_DIR$/web/src/app/addprinter/addprinter.component.html" />
         <option value="$PROJECT_DIR$/web/src/app/addprinter/addprinter.component.ts" />
         <option value="$PROJECT_DIR$/src/util.h" />
@@ -233,17 +237,27 @@
         <option value="$PROJECT_DIR$/src/PrinterManager.h" />
         <option value="$PROJECT_DIR$/src/PrinterManager.cpp" />
         <option value="$PROJECT_DIR$/src/WebsocketSession.h" />
-        <option value="$PROJECT_DIR$/src/WebsocketSession.cpp" />
-        <option value="$PROJECT_DIR$/src/Printer.cpp" />
-        <option value="$PROJECT_DIR$/src/Printer.h" />
         <option value="$PROJECT_DIR$/src/PrintJob.h" />
         <option value="$PROJECT_DIR$/src/PrintJob.cpp" />
-        <option value="$PROJECT_DIR$/src/WebRESTHandler.h" />
-        <option value="$PROJECT_DIR$/src/WebRESTHandler.cpp" />
         <option value="$PROJECT_DIR$/Toolchain-rpi.cmake" />
-        <option value="$PROJECT_DIR$/CMakeLists.txt" />
         <option value="$PROJECT_DIR$/src/WebSession.h" />
         <option value="$PROJECT_DIR$/src/WebSession.cpp" />
+        <option value="$PROJECT_DIR$/web/src/app/app.component.css" />
+        <option value="$PROJECT_DIR$/web/src/app/webgl/stlmodel.service.ts" />
+        <option value="$PROJECT_DIR$/src/WebRESTHandler.h" />
+        <option value="$PROJECT_DIR$/src/WebRESTHandler.cpp" />
+        <option value="$PROJECT_DIR$/web/src/app/app.module.ts" />
+        <option value="$PROJECT_DIR$/web/src/app/Printer.ts" />
+        <option value="$PROJECT_DIR$/web/src/app/print.service.ts" />
+        <option value="$PROJECT_DIR$/test/PrinterTest.cpp" />
+        <option value="$PROJECT_DIR$/CMakeLists.txt" />
+        <option value="$PROJECT_DIR$/src/Printer.h" />
+        <option value="$PROJECT_DIR$/src/Printer.cpp" />
+        <option value="$PROJECT_DIR$/web/src/app/websocket.service.ts" />
+        <option value="$PROJECT_DIR$/web/src/app/app.component.html" />
+        <option value="$PROJECT_DIR$/src/WebsocketSession.cpp" />
+        <option value="$PROJECT_DIR$/web/src/app/webgl/GLView.ts" />
+        <option value="$PROJECT_DIR$/web/src/app/app.component.ts" />
       </list>
     </option>
   </component>
@@ -256,16 +270,17 @@
   <component name="NodeModulesDirectoryManager">
     <handled-path value="$PROJECT_DIR$/web/node_modules" />
   </component>
-  <component name="ProjectFrameBounds">
-    <option name="x" value="-4" />
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="18" />
     <option name="width" value="1902" />
-    <option name="height" value="1389" />
+    <option name="height" value="1170" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -282,94 +297,12 @@
               <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
               <item name="pi3print" type="462c0819:PsiDirectoryNode" />
               <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="boost" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
-              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="boost" type="462c0819:PsiDirectoryNode" />
-              <item name="libs" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
-              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="boost" type="462c0819:PsiDirectoryNode" />
-              <item name="libs" type="462c0819:PsiDirectoryNode" />
-              <item name="context" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
-              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="boost" type="462c0819:PsiDirectoryNode" />
-              <item name="libs" type="462c0819:PsiDirectoryNode" />
-              <item name="context" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
-              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="boost" type="462c0819:PsiDirectoryNode" />
-              <item name="libs" type="462c0819:PsiDirectoryNode" />
-              <item name="context" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="asm" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
-              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="boost" type="462c0819:PsiDirectoryNode" />
-              <item name="libs" type="462c0819:PsiDirectoryNode" />
-              <item name="context" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="posix" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
-              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="boost" type="462c0819:PsiDirectoryNode" />
-              <item name="libs" type="462c0819:PsiDirectoryNode" />
-              <item name="coroutine" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
-              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="boost" type="462c0819:PsiDirectoryNode" />
-              <item name="libs" type="462c0819:PsiDirectoryNode" />
-              <item name="coroutine" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
-              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="boost" type="462c0819:PsiDirectoryNode" />
-              <item name="libs" type="462c0819:PsiDirectoryNode" />
-              <item name="coroutine" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="detail" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
-              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="boost" type="462c0819:PsiDirectoryNode" />
-              <item name="libs" type="462c0819:PsiDirectoryNode" />
-              <item name="coroutine" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="posix" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
-              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
               <item name="nlohmann" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pi3print" type="462c0819:PsiDirectoryNode" />
+              <item name="test" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="dashprint" type="b2602c69:ProjectViewProjectNode" />
@@ -432,7 +365,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -485,28 +417,31 @@
       <workItem from="1523357243084" duration="62824000" />
       <workItem from="1523556200269" duration="5034000" />
       <workItem from="1523604258160" duration="39129000" />
+      <workItem from="1524214727111" duration="7958000" />
+      <workItem from="1524251778417" duration="2922000" />
+      <workItem from="1524257060354" duration="5234000" />
+      <workItem from="1524481328299" duration="9315000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="166635000" />
+    <option name="totallyTimeSpent" value="192064000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-4" y="0" width="1902" height="1389" extended-state="0" />
+    <frame x="-2" y="-1" width="1924" height="1057" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.36951873" />
+      <window_info anchor="bottom" id="TypeScript" order="7" weight="0.32992327" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.36440232" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="CMake" order="7" weight="0.31170213" />
-      <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" weight="0.3296" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.32992327" />
+      <window_info active="true" anchor="bottom" id="Event Log" order="7" side_tool="true" visible="true" weight="0.32941177" />
       <window_info anchor="bottom" id="Version Control" order="7" />
       <window_info anchor="bottom" id="Run" order="2" weight="0.32992327" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Terminal" order="7" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
-      <window_info anchor="bottom" id="TypeScript" order="7" weight="0.32992327" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
@@ -514,6 +449,7 @@
       <window_info anchor="bottom" id="Messages" order="7" visible="true" weight="0.3288" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.32992327" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -528,24 +464,20 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/src/main.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1258">
+          <caret line="74" column="14" lean-forward="true" selection-start-line="74" selection-start-column="14" selection-end-line="74" selection-end-column="14" />
+          <folding>
+            <element signature="e#0#19#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/web/src/app/addprinter/addprinter.component.css">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="51">
           <caret line="3" selection-start-line="3" selection-end-line="3" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/web/src/app/app.component.css">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="68">
-          <caret line="4" selection-start-line="4" selection-end-line="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/web/src/app/app.component.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="663">
-          <caret line="39" column="101" selection-start-line="39" selection-start-column="9" selection-end-line="39" selection-end-column="101" />
         </state>
       </provider>
     </entry>
@@ -579,13 +511,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/web/src/app/app.module.ts">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="442">
-          <caret line="26" column="57" selection-start-line="26" selection-start-column="57" selection-end-line="26" selection-end-column="57" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/web/src/assets/workers/STLModel.worker.js">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="420">
@@ -607,24 +532,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/web/src/app/webgl/Camera.ts">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="705">
-          <caret line="66" column="32" selection-start-line="66" selection-start-column="32" selection-end-line="66" selection-end-column="32" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/web/src/app/webgl/Lines.ts">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="892">
           <caret line="87" column="76" selection-start-line="87" selection-start-column="59" selection-end-line="87" selection-end-column="76" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/web/src/app/webgl/GLView.ts">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="535">
-          <caret line="166" column="46" selection-start-line="166" selection-start-column="46" selection-end-line="166" selection-end-column="46" />
         </state>
       </provider>
     </entry>
@@ -635,20 +546,6 @@
           <folding>
             <element signature="e#0#32#0" expanded="true" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/web/src/app/webgl/stlmodel.service.ts">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="595">
-          <caret line="35" column="43" selection-start-line="35" selection-start-column="43" selection-end-line="35" selection-end-column="43" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/web/src/app/Printer.ts">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="136">
-          <caret line="8" column="21" selection-start-line="8" selection-start-column="21" selection-end-line="8" selection-end-column="21" />
         </state>
       </provider>
     </entry>
@@ -663,13 +560,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1649">
           <caret line="105" column="48" selection-start-line="105" selection-start-column="48" selection-end-line="105" selection-end-column="48" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/web/src/app/print.service.ts">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="493">
-          <caret line="34" column="3" selection-start-line="34" selection-start-column="3" selection-end-line="34" selection-end-column="3" />
         </state>
       </provider>
     </entry>
@@ -708,9 +598,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="370">
           <caret line="84" column="16" selection-start-line="84" selection-start-column="6" selection-end-line="84" selection-end-column="16" />
-          <folding>
-            <element signature="e#134850#135780#0" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -735,23 +622,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/Printer.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="571">
-          <caret line="144" column="6" lean-forward="true" selection-start-line="144" selection-start-column="6" selection-end-line="144" selection-end-column="6" />
-          <folding>
-            <element signature="e#309#326#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/PrintJob.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="867">
           <caret line="51" column="34" selection-start-line="51" selection-start-column="34" selection-end-line="51" selection-end-column="34" />
-          <folding>
-            <element signature="e#97#115#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -759,20 +633,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="408">
           <caret line="30" lean-forward="true" selection-start-line="30" selection-end-line="30" />
-          <folding>
-            <element signature="e#39#60#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/WebsocketSession.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1096">
-          <caret line="184" selection-start-line="184" selection-end-line="184" />
-          <folding>
-            <element signature="e#39#68#0" expanded="true" />
-            <element signature="e#1624#1668#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -787,12 +647,6 @@
           <caret line="52" column="23" lean-forward="true" selection-start-line="52" selection-start-column="23" selection-end-line="52" selection-end-column="23" />
         </state>
       </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/boost/libs/context/src/asm/make_i386_x86_64_sysv_macho_gas.S">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/boost/libs/context/src/asm/jump_arm_aapcs_macho_gas.S">
-      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Toolchain-rpi.cmake">
       <provider selected="true" editor-type-id="text-editor">
@@ -815,9 +669,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/boost/libs/context/src/asm/jump_arm_aapcs_pe_armasm.asm">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/boost/libs/context/src/asm/jump_arm_aapcs_elf_gas.S">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="407">
@@ -825,17 +676,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="500">
-          <caret line="121" column="63" selection-start-line="121" selection-start-column="63" selection-end-line="121" selection-end-column="63" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1258">
-          <caret line="74" column="14" lean-forward="true" selection-start-line="74" selection-start-column="14" selection-end-line="74" selection-end-column="14" />
+          <caret line="74" column="14" selection-start-line="74" selection-start-column="14" selection-end-line="74" selection-end-column="14" />
           <folding>
             <element signature="e#0#19#0" expanded="true" />
           </folding>
@@ -844,45 +688,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/util.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="535">
-          <caret line="44" column="1" lean-forward="true" selection-start-line="44" selection-start-column="1" selection-end-line="44" selection-end-column="1" />
-          <folding>
-            <element signature="e#39#57#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/WebServer.cpp">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/WebRESTHandler.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="816">
-          <caret line="50" column="6" lean-forward="true" selection-start-line="50" selection-start-column="6" selection-end-line="50" selection-end-column="6" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/WebRESTHandler.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="533">
-          <caret line="298" selection-start-line="298" selection-end-line="298" />
-          <folding>
-            <element signature="e#282#309#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/Printer.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="323">
-          <caret line="19" selection-start-line="19" selection-end-line="19" selection-end-column="47" />
+        <state relative-caret-position="748">
+          <caret line="44" column="1" selection-start-line="44" selection-start-column="1" selection-end-line="44" selection-end-column="1" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/WebSession.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="697">
-          <caret line="41" column="72" lean-forward="true" selection-start-line="41" selection-start-column="47" selection-end-line="41" selection-end-column="72" />
+          <caret line="41" column="72" selection-start-line="41" selection-start-column="47" selection-end-line="41" selection-end-column="72" />
           <folding>
             <element signature="e#318#343#0" expanded="true" />
             <element signature="e#867#909#0" expanded="true" />
@@ -890,14 +704,148 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/web/src/app/app.component.css">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="168">
+          <caret line="12" selection-start-line="12" selection-end-line="12" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/WebSession.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="733">
-          <caret line="205" column="34" selection-start-line="205" selection-start-column="34" selection-end-line="205" selection-end-column="34" />
+        <state relative-caret-position="4340">
+          <caret line="310" column="43" selection-start-line="310" selection-start-column="36" selection-end-line="310" selection-end-column="43" />
           <folding>
             <element signature="e#279#311#0" expanded="true" />
-            <element signature="e#1574#1817#0" expanded="true" />
-            <element signature="e#3239#3281#0" expanded="true" />
+            <element signature="e#3861#4327#0" expanded="true" />
+            <element signature="e#5375#5618#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/web/src/app/webgl/stlmodel.service.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="280">
+          <caret line="24" column="68" selection-start-line="24" selection-start-column="68" selection-end-line="24" selection-end-column="68" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/web/src/app/webgl/Camera.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="896">
+          <caret line="66" column="32" selection-start-line="66" selection-start-column="32" selection-end-line="66" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/WebRESTHandler.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="616">
+          <caret line="44" column="61" selection-start-line="43" selection-start-column="4" selection-end-line="44" selection-end-column="61" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/WebRESTHandler.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4214">
+          <caret line="301" column="53" selection-start-line="301" selection-start-column="53" selection-end-line="301" selection-end-column="53" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/web/src/app/app.module.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="210">
+          <caret line="27" column="75" selection-start-line="27" selection-start-column="75" selection-end-line="27" selection-end-column="75" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/web/src/app/Printer.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="406">
+          <caret line="29" selection-start-line="29" selection-end-line="29" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/web/src/app/print.service.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="840">
+          <caret line="65" selection-start-line="65" selection-end-line="65" />
+          <folding>
+            <element signature="e#0#43#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test/PrinterTest.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="252">
+          <caret line="18" selection-start-line="18" selection-end-line="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="315">
+          <caret line="155" column="50" selection-start-line="155" selection-start-column="50" selection-end-line="155" selection-end-column="50" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/Printer.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="571">
+          <caret line="112" column="18" selection-start-line="112" selection-start-column="18" selection-end-line="112" selection-end-column="18" />
+          <folding>
+            <element signature="e#309#326#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/Printer.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="480">
+          <caret line="229" selection-start-line="229" selection-end-line="229" />
+          <folding>
+            <element signature="e#276#296#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/web/src/app/websocket.service.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="364">
+          <caret line="55" column="19" selection-start-line="55" selection-start-column="19" selection-end-line="55" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/web/src/app/app.component.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="182">
+          <caret line="22" column="55" selection-start-line="22" selection-start-column="55" selection-end-line="22" selection-end-column="55" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/WebsocketSession.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="172">
+          <caret line="107" column="113" selection-start-line="107" selection-start-column="113" selection-end-line="107" selection-end-column="113" />
+          <folding>
+            <element signature="e#39#68#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/web/src/app/webgl/GLView.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="249">
+          <caret line="157" column="42" selection-start-line="157" selection-start-column="42" selection-end-line="157" selection-end-column="42" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/web/src/app/app.component.ts">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="211">
+          <caret line="79" column="19" selection-start-line="79" selection-start-column="19" selection-end-line="79" selection-end-column="19" />
+          <folding>
+            <element signature="e#0#79#0" expanded="true" />
           </folding>
         </state>
       </provider>

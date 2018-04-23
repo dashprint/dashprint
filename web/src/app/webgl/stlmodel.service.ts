@@ -23,7 +23,6 @@ export class StlmodelService {
   }
 
   private handleSTLArrayBuffer(observer, arrayBuffer: ArrayBuffer) {
-      console.log("Creating worker");
 
       this.worker.addEventListener('message', (msg) => {
           if (msg.data) {

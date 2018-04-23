@@ -101,6 +101,9 @@ public:
 	std::shared_ptr<PrintJob> printJob() const;
 	bool hasPrintJob() const;
 	boost::signals2::signal<void(bool)>& hasPrintJobChangeSignal() { return m_hasJobChangeSignal; }
+
+	// Parse 'key:some value' pairs
+	static void kvParse(const std::string& line, std::map<std::string,std::string>& values);
 private:
 	void setState(State state);
 
@@ -119,9 +122,6 @@ private:
 	void setupTimeoutCheck();
 	void timeoutCheck(const boost::system::error_code& ec);
 
-	// Parse 'key:some value' pairs
-	static void kvParse(const std::string& line, std::map<std::string,std::string>& values);
-
 	void getTemperature();
 	void parseTemperatures(const std::string& line);
 
@@ -129,6 +129,7 @@ private:
 	void processTargetTempSetting(const char* elem, const std::string& line);
 
 	static unsigned int checksum(std::string cmd);
+	void setNoResetOnReopen();
 private:
 	std::string m_uniqueName; // As used in REST API URLs
 	std::string m_devicePath, m_name;

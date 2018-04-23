@@ -42,7 +42,7 @@ set(dashprint_sources
 include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/numeric/conversion/include)
 
 # Compile Boost.Filesystem
-set(dashprint_sources ${dashprint_sources}
+set(boost_sources
     src/boost/libs/filesystem/src/path.cpp
     src/boost/libs/filesystem/src/operations.cpp
     src/boost/libs/filesystem/src/codecvt_error_category.cpp
@@ -54,7 +54,7 @@ set(dashprint_sources ${dashprint_sources}
 
 # Compile Boost.Log
 include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/log/src)
-set(dashprint_sources ${dashprint_sources}
+set(boost_sources ${boost_sources}
     src/boost/libs/log/src/attribute_name.cpp
     src/boost/libs/log/src/attribute_set.cpp
     src/boost/libs/log/src/attribute_value_set.cpp
@@ -93,7 +93,7 @@ set(dashprint_sources ${dashprint_sources}
 )
 
 # Compile Boost.Thread
-set(dashprint_sources ${dashprint_sources}
+set(boost_sources ${boost_sources}
     src/boost/libs/thread/src/future.cpp
     src/boost/libs/thread/src/pthread/thread.cpp
     src/boost/libs/thread/src/pthread/once_atomic.cpp
@@ -101,7 +101,7 @@ set(dashprint_sources ${dashprint_sources}
 )
 
 # Compile Boost.Coroutine
-set(dashprint_sources ${dashprint_sources}
+set(boost_sources ${boost_sources}
     src/boost/libs/coroutine/src/detail/coroutine_context.cpp
     src/boost/libs/coroutine/src/posix/stack_traits.cpp
     src/boost/libs/coroutine/src/exceptions.cpp
@@ -110,20 +110,20 @@ set(dashprint_sources ${dashprint_sources}
 # Compile Context
 message(STATUS "Processor: ${CMAKE_SYSTEM_PROCESSOR}")
 if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "(armv6l|armv7l)")
-    set(dashprint_sources ${dashprint_sources}
+    set(boost_sources ${boost_sources}
         src/boost/libs/context/src/asm/jump_arm_aapcs_elf_gas.S
         src/boost/libs/context/src/asm/make_arm_aapcs_elf_gas.S
         src/boost/libs/context/src/asm/ontop_arm_aapcs_elf_gas.S
     )
 elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "(x86|i386|i686|x86_64|amd64)")
     if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-        set(dashprint_sources ${dashprint_sources}
+        set(boost_sources ${boost_sources}
             src/boost/libs/context/src/asm/jump_x86_64_sysv_elf_gas.S
             src/boost/libs/context/src/asm/make_x86_64_sysv_elf_gas.S
             src/boost/libs/context/src/asm/ontop_x86_64_sysv_elf_gas.S
         )
     else()
-        set(dashprint_sources ${dashprint_sources}
+        set(boost_sources ${boost_sources}
             src/boost/libs/context/src/asm/jump_i386_sysv_elf_gas.S
             src/boost/libs/context/src/asm/make_i386_sysv_elf_gas.S
             src/boost/libs/context/src/asm/ontop_i386sysv_elf_gas.S
@@ -142,14 +142,30 @@ if (WITH_UDEV)
     set(dashprint_sources ${dashprint_sources} src/UdevPrinterDiscovery.cpp)
 endif (WITH_UDEV)
 
+set(LINK_LIBRARIES ${Boost_LIBRARIES} ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+if(UNIX AND NOT APPLE)
+    set(LINK_LIBRARIES ${LINK_LIBRARIES} rt)
+endif()
+
 configure_file("${CMAKE_SOURCE_DIR}/dashprint_config.h.in" "${CMAKE_BINARY_DIR}/dashprint_config.h")
 include_directories("${CMAKE_BINARY_DIR}")
 
-add_executable(dashprint ${dashprint_sources})
-target_link_libraries(dashprint ${Boost_LIBRARIES} ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
-if(UNIX AND NOT APPLE)
-    target_link_libraries(dashprint rt)
-endif()
+add_library(boost OBJECT ${boost_sources})
+
+add_executable(dashprint ${dashprint_sources} $<TARGET_OBJECTS:boost>)
+target_link_libraries(dashprint ${LINK_LIBRARIES})
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/web/dist/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/dashprint/web")
 install(TARGETS dashprint DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+
+
+if (WITH_TESTS)
+    enable_testing()
+
+    include_directories(${CMAKE_SOURCE_DIR}/src)
+    add_executable(PrinterTest test/PrinterTest.cpp src/Printer.cpp $<TARGET_OBJECTS:boost>)
+    target_link_libraries(PrinterTest ${LINK_LIBRARIES})
+
+    add_test(PrinterTest PrinterTest)
+
+endif(WITH_TESTS)

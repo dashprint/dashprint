@@ -35,7 +35,7 @@ void WebsocketSession::doRead()
 {
 	auto self = shared_from_this();
 
-	m_wsIncomingData.clear();
+	m_wsBuffer.consume(m_wsBuffer.size());
 
 	m_stream.async_read(m_wsBuffer,
 					   boost::asio::bind_executor(m_strand, [self,this](boost::system::error_code ec, std::size_t bytes) {
@@ -50,17 +50,18 @@ void WebsocketSession::doRead()
 
 void WebsocketSession::processMessage()
 {
+	BOOST_LOG_TRIVIAL(debug) << "Incoming WS message: " << m_wsIncomingData;
+
 	try
 	{
 		nlohmann::json req = nlohmann::json::parse(m_wsIncomingData);
-		BOOST_LOG_TRIVIAL(debug) << "Incoming WS message: " << req;
 
-		if (req["subscribe"].is_array())
+		if (!req["subscribe"].is_null())
 		{
 			for (auto v : req["subscribe"])
 				handleSubscribeRequest(v);
 		}
-		if (req["unsubscribe"].is_array())
+		if (!req["unsubscribe"].is_null())
 		{
 			for (auto v : req["unsubscribe"])
 				handleUnsubscribeRequest(v);
@@ -93,6 +94,7 @@ void WebsocketSession::handleSubscribeRequest(const nlohmann::json& request)
 		{
 			m_subscriptions.emplace(v, selfTrackingConnect(m_server->printerManager()->printerListChangeSignal(),
 														   std::bind(&WebsocketSession::printerManagerEvent, this)));
+			return;
 		}
 		else if (route[0] == "Printer" && route.size() >= 3)
 		{
@@ -103,15 +105,19 @@ void WebsocketSession::handleSubscribeRequest(const nlohmann::json& request)
 				if (route[2] == "state")
 				{
 					m_subscriptions.emplace(v, selfTrackingConnect(printer->stateChangeSignal(),
-						std::bind(&WebsocketSession::printerStateEvent, this, route[2], std::placeholders::_1)));
+						std::bind(&WebsocketSession::printerStateEvent, this, route[1], std::placeholders::_1)));
+					return;
 				}
 				else if (route[2] == "temperature")
 				{
 					m_subscriptions.emplace(v, selfTrackingConnect(printer->temperatureChangeSignal(),
-						std::bind(&WebsocketSession::printerTemperatureEvent, this, route[2], std::placeholders::_1)));
+						std::bind(&WebsocketSession::printerTemperatureEvent, this, route[1], std::placeholders::_1)));
+					return;
 				}
 			}
 		}
+
+		BOOST_LOG_TRIVIAL(warning) << "Subscription " << v << " not handled";
 	}
 }
 
@@ -127,6 +133,7 @@ void WebsocketSession::handleUnsubscribeRequest(const nlohmann::json& request)
 
 void WebsocketSession::raiseEvent(const nlohmann::json& event)
 {
+	BOOST_LOG_TRIVIAL(trace) << "Raising an event: " << event;
 	m_pendingEvents.emplace(std::move(event));
 	doWrite();
 }
@@ -167,7 +174,7 @@ void WebsocketSession::printerStateEvent(std::string printer, Printer::State sta
 {
 	nlohmann::json event;
 
-	event["event"]["Printer"][printer]["state"] = {
+	event["event"]["Printer." + printer + ".state"] = {
 			{"connected", state == Printer::State::Connected},
 			{"stopped", state == Printer::State::Stopped}
 	};
@@ -179,6 +186,6 @@ void WebsocketSession::printerTemperatureEvent(std::string printer, std::map<std
 {
 	nlohmann::json event;
 
-	event["event"]["Printer"][printer]["temperature"] = changes;
+	event["event"]["Printer." + printer + ".temperature"] = changes;
 	raiseEvent(std::move(event));
 }

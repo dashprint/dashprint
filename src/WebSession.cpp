@@ -171,6 +171,8 @@ void WebSession::doRead()
 
 bool WebSession::handleAuthentication()
 {
+	// TODO: Implement and use Bearer authentication
+#if 0
 	// Only URLs that require authentication are passed to this method
 	boost::beast::string_view authorization = m_requestParser->get()[boost::beast::http::field::authorization].to_string();
 
@@ -184,6 +186,7 @@ bool WebSession::handleAuthentication()
 	parseAuthenticationKV(authorization.substr(7).to_string(), params);
 
 	// TODO: process parameters
+#endif
 
 	return true;
 }
@@ -191,13 +194,24 @@ bool WebSession::handleAuthentication()
 void WebSession::parseAuthenticationKV(std::string in, std::map<std::string,std::string>& out)
 {
 	boost::algorithm::trim(in);
-	boost::split(out, in, boost::is_any_of(","));
+	std::vector<std::string> elems;
 
-	// Remove quotes
-	for (auto it = out.begin(); it != out.end(); it++)
+	boost::split(elems, in, boost::is_any_of(","));
+
+	// Remove quotes, split as key=value
+	for (const std::string& kv : elems)
 	{
-		if (boost::algorithm::starts_with(it->second, "\"") && boost::algorithm::ends_with(it->second, "\""))
-			it->second = it->second.substr(1, it->second.length()-2);
+		size_t pos = kv.find('=');
+		if (pos == std::string::npos)
+			continue;
+
+		std::string key = kv.substr(0, pos);
+		std::string value = kv.substr(pos+1);
+
+		if (boost::algorithm::starts_with(value, "\"") && boost::algorithm::ends_with(value, "\""))
+			value = value.substr(1, value.length()-2);
+
+		out[key] = value;
 	}
 }
 

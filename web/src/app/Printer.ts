@@ -18,3 +18,12 @@ export class DiscoveredPrinter {
     vendor: string;
     serial: string;
 }
+
+export class PrinterTemperature {
+    current: number;
+    target: number;
+}
+
+export class PrinterTemperatures {
+    [key: string]: PrinterTemperature;
+}
