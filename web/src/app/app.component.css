@@ -10,3 +10,14 @@
 .printer-header h2 {
     margin-top: 0;
 }
+
+.printer-header h2 span {
+    vertical-align: middle;
+}
+
+#fileupload-notif {
+    text-align: center;
+    color: white;
+    padding: 20ex;
+    font-size: 400%;
+}

@@ -27,3 +27,8 @@ export class PrinterTemperature {
 export class PrinterTemperatures {
     [key: string]: PrinterTemperature;
 }
+
+export class TemperaturePoint {
+    when: Date;
+    values: PrinterTemperatures;
+}

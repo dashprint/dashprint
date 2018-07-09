@@ -20,7 +20,13 @@
 
   <div class="content-container">
 
-    <main *ngIf="selectedPrinter" class="content-area">
+    <main *ngIf="selectedPrinter" class="content-area" (drop)="onFileDrop($event)"
+          (dragenter)="onDragEnter($event)"
+          (dragleave)="onDragLeave($event)"
+          (dragover)="onDragOver($event)"
+          [ngClass]="{'drag-over': dragOver}">
+
+      <div class="modal-backdrop" *ngIf="dragOver"><div id="fileupload-notif">Drop a GCODE file</div></div>
 
       <div class="printer-header">
         <clr-dropdown [clrCloseMenuOnItemClick]="true" class="printer-switch">
@@ -37,7 +43,19 @@
         </clr-dropdown-menu>
       </clr-dropdown>
 
-      <h2>{{ selectedPrinter.name }}</h2>
+      <h2>
+        {{ selectedPrinter.name }}
+
+        <span *ngIf="selectedPrinter.connected" class="label label-success">Connected</span>
+        <span *ngIf="selectedPrinter.stopped" class="label label-warning">Disabled</span>
+        <span *ngIf="!selectedPrinter.stopped && !selectedPrinter.connected" class="label label-danger">Disconnected</span>
+      </h2>
+
+      <div class="btn-group btn-primary">
+        <button *ngIf="selectedPrinter.stopped" (click)="startStopPrinter(selectedPrinter, true)" [disabled]="runningEnableDisable" class="btn btn-success">Enable</button>
+        <button *ngIf="!selectedPrinter.stopped" (click)="startStopPrinter(selectedPrinter, false)" [disabled]="runningEnableDisable" class="btn btn-warning">Disable</button>
+        <button (click)="editPrinter(selectedPrinter)" class="btn btn-outline">Edit</button>
+      </div>
 
       <div *ngIf="temperatures" class="printer-temperatures">
         <p *ngIf="temperatures.T">Tool: {{ temperatures.T.current.toFixed(1) }} C</p>

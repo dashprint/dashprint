@@ -51,6 +51,7 @@ export class WebsocketService {
                           let tempName = key.substr(0, dot);
                           let tempParam = key.substr(dot+1);
 
+                          // TODO: prevent undefined error
                           temps[tempName][tempParam] = change[key];
                       }
                   }
@@ -137,6 +138,7 @@ export class WebsocketService {
   private reconnect() {
       console.warn("Websocket connection went down");
 
+      this.socket.onerror = null;
       this.socket.close();
       setTimeout(() => {
           console.debug("Reconnecting the websocket...");

@@ -48,7 +48,7 @@ void loadConfig()
 {
 	boost::filesystem::path configPath(::getenv("HOME"));
 
-	configPath /= ".config/pi3printrc";
+	configPath /= ".config/dashprintrc";
 
 	try
 	{
@@ -64,7 +64,7 @@ void saveConfig()
 {
 	boost::filesystem::path configPath(::getenv("HOME"));
 
-	configPath /= ".config/pi3printrc";
+	configPath /= ".config/dashprintrc";
 
 	try
 	{

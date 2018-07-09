@@ -1,15 +1,10 @@
 import { Component, OnInit, ViewContainerRef, ViewChild } from '@angular/core';
-import {Printer, PrinterTemperatures} from './Printer';
+import {Printer, PrinterTemperatures, TemperaturePoint} from './Printer';
 import { PrintService } from './print.service';
 import { ModalService } from './modal.service';
 import { AddprinterComponent } from './addprinter/addprinter.component';
 import {WebsocketService} from "./websocket.service";
 import {Subscription} from "rxjs/Subscription";
-
-class TemperaturePoint {
-  value: number;
-  time: Date;
-}
 
 @Component({
   selector: 'app-root',
@@ -22,11 +17,13 @@ export class AppComponent implements OnInit {
 
   selectedPrinter: Printer;
   temperatures: PrinterTemperatures;
-  toolTempHistory: TemperaturePoint[];
-  bedTempHistory: TemperaturePoint[];
+  temperatureHistory: TemperaturePoint[];
 
   selectedPrinterSubscription: Subscription;
   temperaturesSubscription: Subscription;
+
+  dragOver: number = 0;
+  runningEnableDisable: boolean = false;
 
   @ViewChild('modals', {
     read: ViewContainerRef
@@ -65,15 +62,17 @@ export class AppComponent implements OnInit {
       this.modalService.showModal(AddprinterComponent);
   }
 
-  private pushTempHistory(target: TemperaturePoint[], source) {
-    if (source) {
-      if (target.length == 0 || target[target.length-1].value != source.current) {
-          target.push({
-              time: new Date(),
-              value: source.current
-          });
-      }
-    }
+  private pushTempHistory() {
+    const MAX_TEMPERATURE_HISTORY = 30*60*1000;
+    // clone current temperatures
+    var temps: PrinterTemperatures = JSON.parse(JSON.stringify(this.temperatures));
+    var now: Date = new Date();
+
+    this.temperatureHistory.push({ when: now, values: temps });
+
+    // Kill old data
+    while (this.temperatureHistory.length > 0 && (now.getUTCMilliseconds() - new Date(this.temperatureHistory[0].when).getUTCMilliseconds()) > MAX_TEMPERATURE_HISTORY)
+      this.temperatureHistory.shift();
   }
 
   switchPrinter(printer: Printer) {
@@ -96,21 +95,71 @@ export class AppComponent implements OnInit {
         .subscribeToPrinter(this.selectedPrinter).subscribe((printer: Printer) => {});
 
     this.temperatures = null;
-    this.toolTempHistory = [];
-    this.bedTempHistory = [];
+    this.temperatureHistory = null;
 
     this.printService.getPrinterTemperatures(this.selectedPrinter).subscribe((temps) => {
-      this.temperatures = temps;
+      this.temperatureHistory = temps;
 
-      this.pushTempHistory(this.toolTempHistory, temps.T);
-      this.pushTempHistory(this.bedTempHistory, temps.B);
+      if (temps && temps.length > 0)
+        this.temperatures = temps[temps.length-1].values;
 
       this.temperaturesSubscription = this.websocketService.subscribeToPrinterTemperatures(this.selectedPrinter, this.temperatures)
           .subscribe((temps) => {
-              this.pushTempHistory(this.toolTempHistory, temps.T);
-              this.pushTempHistory(this.bedTempHistory, temps.B);
+              this.pushTempHistory();
               // TODO: redraw temperature display
       });
     });
+  }
+
+  onFileDrop(event: DragEvent) {
+    event.preventDefault();
+
+    if (event.dataTransfer.items) {
+      for (let i = 0; i < event.dataTransfer.items.length; i++) {
+        if (event.dataTransfer.items[i].kind === 'file') {
+          let file: File = event.dataTransfer.items[i].getAsFile();
+          this.processFile(file);
+          break;
+        }
+      }
+    } else {
+      for (let i = 0; i < event.dataTransfer.files.length; i++) {
+        this.processFile(event.dataTransfer.files[i]);
+        break;
+      }
+    }
+  }
+
+  private processFile(file: File) {
+    if (!file.name.toLowerCase().endsWith(".gcode")) {
+      // TODO: Display an error
+        return;
+    }
+  }
+
+  onDragEnter(event: DragEvent) {
+    console.debug("onDragEnter");
+    this.dragOver++;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  onDragLeave(event: DragEvent) {
+    console.debug("onDragLeave");
+    this.dragOver--;
+  }
+
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+  }
+
+  startStopPrinter(printer: Printer, start: boolean) {
+    this.runningEnableDisable = true;
+    this.printService.modifyPrinter(printer, { stopped: !start })
+        .subscribe(x => { this.runningEnableDisable = false; });
+  }
+
+  editPrinter(printer: Printer) {
+    // TODO
   }
 }

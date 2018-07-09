@@ -28,6 +28,7 @@
 #include <termios.h>
 
 static const boost::posix_time::seconds RECONNECT_DELAY(5);
+static const std::chrono::minutes MAX_TEMPERATURE_HISTORY(30);
 static constexpr int DATA_TIMEOUT = 5000;
 static constexpr int MAX_LINENO = 10000;
 
@@ -152,6 +153,7 @@ void Printer::reset()
 	m_reconnectTimer.cancel(ec);
 	m_timeoutTimer.cancel(ec);
 	m_executingCommand.clear();
+	m_temperatures.clear();
 
 	m_replyLines.clear();
 	while (!m_commandQueue.empty())
@@ -189,11 +191,34 @@ void Printer::parseTemperatures(const std::string& line)
 
 	kvParse(line, values);
 
+	TemperaturePoint point;
+	TemperaturePoint* prevPoint = nullptr;
+
+	point.when = std::chrono::system_clock::now();
+
 	std::unique_lock<std::mutex> lock(m_temperaturesMutex);
+	if (!m_temperatures.empty())
+		prevPoint = &m_temperatures.back();
+
+	lock.unlock();
+
 	for (auto it : values)
 	{
-		Temperature& temp = m_temperatures[it.first];
+		// TODO: Multiple tools support
+		// TODO: Temp updates (e.g. during preheat) don't contain all the keys as M105 replies
+		if (it.first != "T" && it.first != "B")
+			continue;
+
+		Temperature& temp = point.values[it.first];
+		Temperature* prevTemp = nullptr;
 		ssize_t slash;
+
+		if (prevPoint != nullptr)
+		{
+			auto it2 = prevPoint->values.find(it.first);
+			if (it2 != prevPoint->values.end())
+				prevTemp = &it2->second;
+		}
 
 		try
 		{
@@ -202,21 +227,17 @@ void Printer::parseTemperatures(const std::string& line)
 			slash = it.second.find('/');
 			value = std::stof(it.second);
 
-			if (value != temp.current)
-			{
-				temp.current = value;
+			if (!prevTemp || value != prevTemp->current)
 				changes.emplace(it.first + ".current", value);
-			}
+			temp.current = value;
 
 			if (slash != std::string::npos)
 			{
 				value = std::stof(it.second.substr(slash + 1));
 
-				if (value != temp.target)
-				{
-					temp.target = value;
+				if (!prevTemp || value != prevTemp->target)
 					changes.emplace(it.first + ".target", value);
-				}
+				temp.target = value;
 			}
 		}
 		catch (const std::exception& e)
@@ -225,10 +246,22 @@ void Printer::parseTemperatures(const std::string& line)
 		}
 	}
 
+	lock.lock();
+	m_temperatures.push_back(point);
+	while (point.when - m_temperatures.front().when > MAX_TEMPERATURE_HISTORY)
+		m_temperatures.pop_front();
+	lock.unlock();
+
 	if (!changes.empty())
 	{
 		m_temperatureChangeSignal(changes);
 	}
+}
+
+std::list<Printer::TemperaturePoint> Printer::getTemperatureHistory() const
+{
+	std::unique_lock<std::mutex> lock(m_temperaturesMutex);
+	return m_temperatures;
 }
 
 void Printer::setState(State state)
@@ -456,6 +489,14 @@ void Printer::readDone(const boost::system::error_code& ec)
 	{
 		parseTemperatures(line);
 	}
+	else if (line == "start")
+	{
+		if (m_state == State::Connected)
+		{
+			// TODO: Fail running print jobs
+			// TODO: Reset line counter
+		}
+	}
 
 	doRead();
 }
@@ -566,12 +607,12 @@ void Printer::processTargetTempSetting(const char* elem, const std::string& line
 
 	try
 	{
-		Temperature& temp = m_temperatures[elem];
+		Temperature& temp = getTemperatures()[elem];
 		float value = std::stof(line.substr(6));
 
 		if (value != temp.target)
 		{
-			temp.target = value;
+			// temp.target = value; // will get automatically updated soon
 			m_temperatureChangeSignal({ { std::string(elem) + ".target", value } });
 		}
 	}
@@ -636,7 +677,10 @@ void Printer::regenerateApiKey()
 std::map<std::string, Printer::Temperature> Printer::getTemperatures() const
 {
 	std::lock_guard<std::mutex> lock(m_temperaturesMutex);
-	return m_temperatures;
+	if (!m_temperatures.empty())
+		return m_temperatures.back().values;
+	else
+		return std::map<std::string, Printer::Temperature>();
 }
 
 std::shared_ptr<PrintJob> Printer::printJob() const

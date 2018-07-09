@@ -299,15 +299,29 @@ void WebRESTHandler::restGetPrinterTemperatures(WebRESTContext& context)
 	if (!printer)
 		throw WebErrors::not_found("Printer not found");
 
-	nlohmann::json result = nlohmann::json::object();
-	Printer::Temperatures temps = printer->getTemperatures();
+	nlohmann::json result = nlohmann::json::array();
+	std::list<Printer::TemperaturePoint> temps = printer->getTemperatureHistory();
 
 	for (auto it = temps.begin(); it != temps.end(); it++)
 	{
-		result[it->first] = {
-				{ "current", it->second.current },
-				{ "target", it->second.target }
-		};
+		nlohmann::json values = nlohmann::json::object();
+
+		for (auto it2 = it->values.begin(); it2 != it->values.end(); it2++)
+		{
+			values[it2->first] = {
+					{"current", it2->second.current},
+					{"target",  it2->second.target}
+			};
+		}
+
+		std::time_t tt = std::chrono::system_clock::to_time_t(it->when);
+		char when[sizeof "2011-10-08T07:07:09.000Z"];
+		strftime(when, sizeof when, "%FT%T.000Z", gmtime(&tt));
+
+		nlohmann::json pt = nlohmann::json::object();
+		pt["when"] = when;
+		pt["values"] = values;
+		result.push_back(pt);
 	}
 
 	context.send(result, WebRESTContext::http_status::ok);

@@ -22,6 +22,8 @@
 #include <functional>
 #include <boost/signals2.hpp>
 #include <mutex>
+#include <list>
+#include <chrono>
 
 class PrintJob;
 
@@ -74,13 +76,19 @@ public:
 
 	boost::signals2::signal<void(State)>& stateChangeSignal() { return m_stateChangeSignal; }
 
+	// TODO: save 30 mins worth of data
 	struct Temperature
 	{
 		float current = 0;
 		float target = 0;
 	};
-	typedef std::map<std::string, Temperature> Temperatures;
-	Temperatures getTemperatures() const;
+	struct TemperaturePoint
+	{
+		std::chrono::system_clock::time_point when;
+		std::map<std::string, Temperature> values;
+	};
+	std::map<std::string, Temperature> getTemperatures() const;
+	std::list<TemperaturePoint> getTemperatureHistory() const;
 
 	boost::signals2::signal<void(std::map<std::string, float>)>& temperatureChangeSignal() { return m_temperatureChangeSignal; }
 
@@ -158,7 +166,7 @@ private:
 	std::map<std::string, std::string> m_baseParameters;
 
 	std::string m_apiKey;
-	Temperatures m_temperatures;
+	std::list<TemperaturePoint> m_temperatures;
 	mutable std::mutex m_temperaturesMutex;
 
 	PrintArea m_printArea;
