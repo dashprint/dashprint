@@ -33,11 +33,12 @@ public:
 	void progress(size_t& pos, size_t& total) const;
 
 	boost::signals2::signal<void(State)>& stateChangeSignal() { return m_stateChangeSignal; }
+protected:
+	void setError(const char* error);
 private:
 	void printLine();
 	void lineProcessed(const std::vector<std::string>& resp);
 	void setState(State state);
-	void setError(const char* error);
 	std::string nextLine();
 private:
 	std::ifstream m_file;
@@ -50,6 +51,8 @@ private:
 
 	boost::signals2::signal<void(State)> m_stateChangeSignal;
 	size_t m_position = 0, m_size;
+
+	friend class Printer;
 };
 
 

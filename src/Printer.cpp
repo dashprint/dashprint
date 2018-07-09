@@ -493,8 +493,14 @@ void Printer::readDone(const boost::system::error_code& ec)
 	{
 		if (m_state == State::Connected)
 		{
-			// TODO: Fail running print jobs
-			// TODO: Reset line counter
+			// Fail running print jobs
+			std::unique_lock<std::mutex> lock(m_printJobMutex);
+			if (m_printJob)
+				m_printJob->setError("Printer reset");
+
+			// Reset line counter
+			m_nextLineNo = MAX_LINENO;
+			doWrite();
 		}
 	}
 

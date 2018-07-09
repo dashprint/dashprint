@@ -43,6 +43,9 @@ private:
 
 	void restGetPrinterTemperatures(WebRESTContext& context);
 	void restSetPrinterTemperatures(WebRESTContext& context);
+
+	void octoprintGetVersion(WebRESTContext& context);
+	void octoprintUploadGcode(WebRESTContext& context);
 private:
 	typedef void (WebRESTHandler::*handler_t)(WebRESTContext& context);
 	

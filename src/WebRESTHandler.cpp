@@ -81,6 +81,13 @@ WebRESTHandler::WebRESTHandler()
 		HandlerMapping{ std::regex("/v1/printers/([^/]+)/temperatures"), method::get, &WebRESTHandler::restGetPrinterTemperatures },
 				
 		// OctoPrint emu API
+		// X-Api-Key
+		//
+		// Used by Slic3r:
+		// api/files/local, http form post with print (true/false), path and file
+		// api/version
+		HandlerMapping{ std::regex("/version"), method::get, &WebRESTHandler::octoprintGetVersion },
+		HandlerMapping{ std::regex("/files/local"), method::post, &WebRESTHandler::octoprintUploadGcode },
 	});
 }
 
@@ -278,7 +285,7 @@ void WebRESTHandler::restSetupPrinter(WebRESTContext& context)
 
 void WebRESTHandler::restSubmitJob(WebRESTContext& context)
 {
-
+	// TODO: Support both direct upload and referring to an uploaded file
 }
 
 void WebRESTHandler::restModifyJob(WebRESTContext& context)
@@ -334,6 +341,20 @@ void WebRESTHandler::restSetPrinterTemperatures(WebRESTContext& context)
 	std::shared_ptr<Printer> printer = context.printerManager()->printer(name.c_str());
 	if (!printer)
 		throw WebErrors::not_found("Printer not found");
+	}
+	
+void WebRESTHandler::octoprintGetVersion(WebRESTContext& context)
+{
+	context.send("1.0-dashprint", "text/plain");
+}
+
+void WebRESTHandler::octoprintUploadGcode(WebRESTContext& context)
+{
+	// TODO: Parse WWW form upload
+	// Fields:
+	// print: true/false
+	// path: destination path
+	// file: file data
 }
 
 void WebRESTContext::send(http_status status, const std::map<std::string,std::string>& headers)

@@ -20,6 +20,8 @@ if (WITH_UDEV)
     include_directories(${UDEV_INCLUDE_DIR})
 endif (WITH_UDEV)
 
+# Detect 'mmal_core mmal_util mmal_vc_client vcos bcm_host' for RPi hi-perf camera
+
 # Boost is typically WAY too old on Raspbian, so we carry our own version
 # which is used as a header-only library.
 #find_package(Boost 1.55.0 REQUIRED system)
@@ -37,7 +39,10 @@ set(dashprint_sources
     src/Printer.cpp
     src/PrinterManager.cpp
     src/util.cpp
-        src/PrintJob.cpp src/PrintJob.h)
+    src/PrintJob.cpp
+    src/PrintJob.h
+    src/MultipartFormData.cpp
+)
 
 include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/numeric/conversion/include)
 
@@ -107,6 +112,11 @@ set(boost_sources ${boost_sources}
     src/boost/libs/coroutine/src/exceptions.cpp
 )
 
+# Compile Boost.Iostreams
+set(boost_sources ${boost_sources}
+    src/boost/libs/iostreams/src/mapped_file.cpp
+)
+
 # Compile Context
 message(STATUS "Processor: ${CMAKE_SYSTEM_PROCESSOR}")
 if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "(armv6l|armv7l)")
@@ -163,9 +173,15 @@ if (WITH_TESTS)
     enable_testing()
 
     include_directories(${CMAKE_SOURCE_DIR}/src)
-    add_executable(PrinterTest test/PrinterTest.cpp src/Printer.cpp $<TARGET_OBJECTS:boost>)
+    add_executable(PrinterTest test/PrinterTest.cpp src/Printer.cpp src/PrintJob.cpp $<TARGET_OBJECTS:boost>)
     target_link_libraries(PrinterTest ${LINK_LIBRARIES})
 
     add_test(PrinterTest PrinterTest)
 
+    ##############
+
+    add_executable(MultipartTest test/MultipartTest.cpp src/MultipartFormData.cpp $<TARGET_OBJECTS:boost>)
+    target_link_libraries(MultipartTest ${LINK_LIBRARIES})
+
+    add_test(MultipartTest MultipartTest)
 endif(WITH_TESTS)
