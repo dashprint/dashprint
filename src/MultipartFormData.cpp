@@ -7,7 +7,8 @@
 #include <iostream>
 #include <ctype.h>
 
-MultipartFormData::MultipartFormData(const char* filename)
+MultipartFormData::MultipartFormData(const char* filename, const char* boundary)
+: m_contents(nullptr)
 {
 	m_mapping.open(filename, std::ios_base::in);
 	if (!m_mapping.is_open())
@@ -16,6 +17,16 @@ MultipartFormData::MultipartFormData(const char* filename)
 		ss << "Cannot open " << filename;
 		throw std::runtime_error(ss.str());
 	}
+
+	if (boundary)
+		m_boundary = boundary;
+}
+
+MultipartFormData::MultipartFormData(const std::string* contents, const char* boundary)
+: m_contents(contents)
+{
+	if (boundary)
+		m_boundary = boundary;
 }
 
 MultipartFormData::~MultipartFormData()
@@ -23,17 +34,36 @@ MultipartFormData::~MultipartFormData()
 
 }
 
+const char* MultipartFormData::data() const
+{
+	if (m_contents)
+		return m_contents->data();
+	else
+		return m_mapping.const_data();
+}
+
+size_t MultipartFormData::length() const
+{
+	if (m_contents)
+		return m_contents->length();
+	else
+		return m_mapping.size();
+}
+
 void MultipartFormData::parse(FieldHandler_t handler)
 {
 	size_t pos = 0;
 	std::string boundary;
 
-	while (pos < m_mapping.size())
+	while (pos < length())
 	{
 		Headers_t headers;
 		bool contentSection = true;
 
-		parseHeaders(pos, headers);
+		if (!boundary.empty() || m_boundary.empty())
+			parseHeaders(pos, headers);
+		else if (boundary.empty() && !m_boundary.empty())
+			boundary = m_boundary;
 
 		// First section
 		if (boundary.empty())
@@ -69,8 +99,8 @@ void MultipartFormData::parse(FieldHandler_t handler)
 			contentSection = false;
 		}
 
-		const char* end = static_cast<const char*>(::memmem(m_mapping.const_data() + pos, m_mapping.size() - pos, boundary.c_str(), boundary.length()));
-		if (!end || end-m_mapping.const_data() >= m_mapping.size()-2)
+		const char* end = static_cast<const char*>(::memmem(data() + pos, length() - pos, boundary.c_str(), boundary.length()));
+		if (!end || end-data() >= length()-2)
 		{
 			std::cerr << "Premature multipart body end\n";
 			break;
@@ -93,13 +123,13 @@ void MultipartFormData::parse(FieldHandler_t handler)
 					name = itName->second;
 			}
 
-			if (!handler(headers, name.c_str(), m_mapping.const_data() + pos, end - m_mapping.const_data() - pos))
+			if (!handler(headers, name.c_str(), data() + pos, end - data() - pos))
 				break;
 		}
 
 		if (std::memcmp(end + boundary.length(), "--", 2) == 0)
 			break; // We're done
-		pos = end-m_mapping.const_data() + 2;
+		pos = end-data() + 2;
 	}
 }
 
@@ -109,10 +139,10 @@ void MultipartFormData::parseHeaders(size_t& offset, Headers_t& out)
 
 	out.clear();
 
-	while (offset < m_mapping.size())
+	while (offset < length())
 	{
-		const char* start = m_mapping.const_data() + offset;
-		void* crlf = ::memmem(start, std::min(MAX_HEADER_LENGTH, m_mapping.size() - offset),
+		const char* start = data() + offset;
+		void* crlf = ::memmem(start, std::min(MAX_HEADER_LENGTH, length() - offset),
 						"\r\n", 2);
 
 		if (!crlf)

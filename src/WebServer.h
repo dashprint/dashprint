@@ -15,22 +15,25 @@
 #define WEBSERVER_H
 #include <boost/asio.hpp>
 #include "PrinterManager.h"
+#include "FileManager.h"
 
 class WebSession;
 
 class WebServer {
 public:
-	WebServer(boost::asio::io_service& io, PrinterManager& printerManager);
+	WebServer(boost::asio::io_service& io, PrinterManager& printerManager, FileManager& fileManager);
 	~WebServer();
 	
 	void start(int port);
 	PrinterManager* printerManager() { return &m_printerManager; }
+	FileManager* fileManager() { return &m_fileManager; }
 private:
 	void doAccept();
 	void connectionAccepted(boost::system::error_code ec);
 private:
 	boost::asio::io_service& m_io;
 	PrinterManager& m_printerManager;
+	FileManager& m_fileManager;
 	boost::asio::ip::tcp::acceptor m_acceptor;
 	boost::asio::ip::tcp::socket m_socket;
 };

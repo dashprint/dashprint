@@ -10,6 +10,7 @@
 #include "util.h"
 #include "WebServer.h"
 #include "PrinterManager.h"
+#include "FileManager.h"
 
 static void discoverPrinters();
 static void runApp();
@@ -57,11 +58,20 @@ void discoverPrinters()
 	}
 }
 
+static std::string localStoragePath()
+{
+	boost::filesystem::path path(::getenv("HOME"));
+
+	path /= ".local/share/dashprint/files";
+	return path.string();
+}
+
 void runApp()
 {
 	boost::asio::io_service io;
+	FileManager fileManager(localStoragePath().c_str());
 	PrinterManager printerManager(io, g_config);
-	WebServer webServer(io, printerManager);
+	WebServer webServer(io, printerManager, fileManager);
 	
 	webServer.start(g_config.get<int>("WebServer.port", 8970));
 	

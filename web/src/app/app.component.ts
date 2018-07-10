@@ -1,10 +1,11 @@
-import { Component, OnInit, ViewContainerRef, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewContainerRef, ViewChild, ElementRef } from '@angular/core';
 import {Printer, PrinterTemperatures, TemperaturePoint} from './Printer';
 import { PrintService } from './print.service';
 import { ModalService } from './modal.service';
 import { AddprinterComponent } from './addprinter/addprinter.component';
 import {WebsocketService} from "./websocket.service";
 import {Subscription} from "rxjs/Subscription";
+import { TemperatureGraph } from './canvas/TemperatureGraph';
 
 @Component({
   selector: 'app-root',
@@ -25,6 +26,17 @@ export class AppComponent implements OnInit {
   dragOver: number = 0;
   runningEnableDisable: boolean = false;
 
+  temperaturesGraph: ElementRef;
+  temperaturesGraphRenderer: TemperatureGraph;
+  @ViewChild("temperaturesGraph") set content(content: ElementRef) {
+    this.temperaturesGraph = content;
+
+    if (this.temperaturesGraph) {
+      this.temperaturesGraphRenderer = new TemperatureGraph(this.temperaturesGraph.nativeElement);
+      this.updateTemperaturesGraph();
+    }
+  }
+
   @ViewChild('modals', {
     read: ViewContainerRef
   }) viewContainerRef: ViewContainerRef;
@@ -41,6 +53,8 @@ export class AppComponent implements OnInit {
   }
 
   updatePrinterList() {
+    console.log("updatePrinterList() called");
+
     this.printService.getPrinters().subscribe(printers => {
       this.printers = printers;
 
@@ -96,19 +110,30 @@ export class AppComponent implements OnInit {
 
     this.temperatures = null;
     this.temperatureHistory = null;
+    this.updateTemperaturesGraph();
 
     this.printService.getPrinterTemperatures(this.selectedPrinter).subscribe((temps) => {
       this.temperatureHistory = temps;
 
       if (temps && temps.length > 0)
         this.temperatures = temps[temps.length-1].values;
+      this.updateTemperaturesGraph();
 
       this.temperaturesSubscription = this.websocketService.subscribeToPrinterTemperatures(this.selectedPrinter, this.temperatures)
           .subscribe((temps) => {
               this.pushTempHistory();
-              // TODO: redraw temperature display
+              this.updateTemperaturesGraph();
       });
     });
+  }
+
+  private updateTemperaturesGraph() {
+    if (!this.temperaturesGraphRenderer)
+      return;
+
+    this.temperaturesGraphRenderer.temperatureHistory = this.temperatureHistory;
+    this.temperaturesGraphRenderer.temperatures = this.temperatures;
+    this.temperaturesGraphRenderer.render();
   }
 
   onFileDrop(event: DragEvent) {

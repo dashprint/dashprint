@@ -28,7 +28,7 @@ public:
 	static WebRESTHandler& instance();
 	
 	typedef boost::beast::http::request<boost::beast::http::string_body> reqtype_t;
-	bool call(const std::string& url, const reqtype_t& req, WebSession* session);
+	bool call(const std::string& url, const reqtype_t& req, const std::string& bodyFile, WebSession* session);
 private:
 	void restPrintersDiscover(WebRESTContext& context);
 	void restPrinters(WebRESTContext& context);
@@ -43,6 +43,10 @@ private:
 
 	void restGetPrinterTemperatures(WebRESTContext& context);
 	void restSetPrinterTemperatures(WebRESTContext& context);
+
+	void restListFiles(WebRESTContext& context);
+	void restUploadFile(WebRESTContext& context);
+	void restDownloadFile(WebRESTContext& context);
 
 	void octoprintGetVersion(WebRESTContext& context);
 	void octoprintUploadGcode(WebRESTContext& context);

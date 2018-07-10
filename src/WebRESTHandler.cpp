@@ -19,12 +19,14 @@
 #include "PrinterDiscovery.h"
 #include "PrinterManager.h"
 #include "util.h"
+#include "MultipartFormData.h"
+#include "PrintJob.h"
 
 class WebRESTContext
 {
 public:
-	WebRESTContext(const WebRESTHandler::reqtype_t& req, WebSession* session)
-	: m_request(req), m_session(session)
+	WebRESTContext(const WebRESTHandler::reqtype_t& req, const std::string& fileBody, WebSession* session)
+	: m_request(req), m_session(session), m_fileBody(fileBody)
 	{	
 	}
 	
@@ -34,11 +36,15 @@ public:
 	void send(http_status status, const std::map<std::string,std::string>& headers);
 	void send(const std::string& text, const char* contentType, http_status status = http_status::ok);
 	void send(const nlohmann::json& json, http_status status = http_status::ok);
+	void sendFile(const char* path, http_status status = http_status::ok);
 	
 	std::smatch& match() { return m_match; }
 
 	void setPrinterManager(PrinterManager* pm) { m_printerManager = pm; }
 	PrinterManager* printerManager() { return m_printerManager; }
+
+	FileManager* fileManager() { return m_fileManager; }
+	void setFileManager(FileManager* fm) { m_fileManager = fm; }
 
 	nlohmann::json jsonRequest() const
 	{
@@ -52,11 +58,52 @@ public:
 	{
 		return m_request.at(boost::beast::http::field::host).to_string();
 	}
+
+	const std::string& fileBody() const
+	{
+		return m_fileBody;
+	}
+
+	MultipartFormData* multipartBody()
+	{
+		std::string contentType = m_request.at(boost::beast::http::field::content_type).to_string();
+		std::string value;
+		MultipartFormData::Headers_t params;
+
+		MultipartFormData::parseKV(contentType.c_str(), value, params);
+
+		if (value != "multipart/form-data")
+			return nullptr;
+		
+		if (params.find("boundary") == params.end())
+			return nullptr;
+		
+		if (!m_fileBody.empty())
+			return new MultipartFormData(m_fileBody.c_str(), params["boundary"].c_str());
+		else
+			return new MultipartFormData(&m_request.body(), params["boundary"].c_str());
+	}
+
+	const WebRESTHandler::reqtype_t& request()
+	{
+		return m_request;
+	}
+
+	std::string baseUrl()
+	{
+		// TODO: HTTPS
+		std::stringstream ss;
+		ss << "http://" << host();
+
+		return ss.str();
+	}
 private:
 	const WebRESTHandler::reqtype_t& m_request;
 	WebSession* m_session;
 	std::smatch m_match;
 	PrinterManager* m_printerManager;
+	FileManager* m_fileManager;
+	std::string m_fileBody;
 };
 
 WebRESTHandler::WebRESTHandler()
@@ -79,6 +126,10 @@ WebRESTHandler::WebRESTHandler()
 
 		HandlerMapping{ std::regex("/v1/printers/([^/]+)/temperatures"), method::put, &WebRESTHandler::restSetPrinterTemperatures },
 		HandlerMapping{ std::regex("/v1/printers/([^/]+)/temperatures"), method::get, &WebRESTHandler::restGetPrinterTemperatures },
+
+		HandlerMapping{ std::regex("/v1/files/([^/]+)"), method::post, &WebRESTHandler::restUploadFile },
+		HandlerMapping{ std::regex("/v1/files/([^/]+)"), method::get, &WebRESTHandler::restDownloadFile },
+		HandlerMapping{ std::regex("/v1/files"), method::get, &WebRESTHandler::restListFiles },
 				
 		// OctoPrint emu API
 		// X-Api-Key
@@ -97,9 +148,9 @@ WebRESTHandler& WebRESTHandler::instance()
 	return instance;
 }
 
-bool WebRESTHandler::call(const std::string& url, const reqtype_t& req, WebSession* session)
+bool WebRESTHandler::call(const std::string& url, const reqtype_t& req, const std::string& bodyFile, WebSession* session)
 {
-	WebRESTContext context(req, session);
+	WebRESTContext context(req, bodyFile, session);
 	
 	decltype(m_restHandlers)::iterator it = std::find_if(m_restHandlers.begin(), m_restHandlers.end(), [&](const HandlerMapping& handler) {
 		return req.method() == handler.method && std::regex_match(url, context.match(), handler.regex);
@@ -109,6 +160,7 @@ bool WebRESTHandler::call(const std::string& url, const reqtype_t& req, WebSessi
 		return false;
 
 	context.setPrinterManager(session->webServer()->printerManager());
+	context.setFileManager(session->webServer()->fileManager());
 
 	(this->*(it->handler))(context);
 	return true;
@@ -140,7 +192,7 @@ static nlohmann::json jsonFillPrinter(std::shared_ptr<Printer> printer, bool isD
 			{"device_path", printer->devicePath()},
 			{"baud_rate",   printer->baudRate()},
 			{"stopped",     printer->state() == Printer::State::Stopped},
-			{"api_key",     printer->apiKey()},
+			//{"api_key",     printer->apiKey()},
 			{"name",        printer->name()},
 			{"default",     isDefault},
 			{"connected",   printer->state() == Printer::State::Connected},
@@ -285,17 +337,87 @@ void WebRESTHandler::restSetupPrinter(WebRESTContext& context)
 
 void WebRESTHandler::restSubmitJob(WebRESTContext& context)
 {
-	// TODO: Support both direct upload and referring to an uploaded file
+	// If there's a paused/running print job, report a conflict
+	// else create a new PrintJob based on the file name passed and start it.
+	nlohmann::json req = context.jsonRequest();
+
+	if (!req["file"].is_string())
+		throw WebErrors::bad_request("missing 'file' param");
+
+	std::string printerName = context.match()[1];
+	std::shared_ptr<Printer> printer = context.printerManager()->printer(printerName.c_str());
+
+	if (!printer)
+		throw WebErrors::not_found("Printer not found");
+
+	std::shared_ptr<PrintJob> printJob = printer->printJob();
+	if (printJob && (printJob->state() == PrintJob::State::Paused || printJob->state() == PrintJob::State::Running))
+	{
+		context.send(boost::beast::http::status::conflict);
+		return;
+	}
+
+	std::string filePath = context.fileManager()->getFilePath(req["file"].get<std::string>().c_str());
+	if (!boost::filesystem::is_regular_file(filePath))
+		throw WebErrors::not_found(".gcode file not found");
+	
+	printJob = std::make_shared<PrintJob>(printer, filePath.c_str());
+	printer->setPrintJob(printJob);
+
+	// Unless state is Stopped, start the job
+	if (!req["state"].is_string() || req["state"].get<std::string>() != "Stopped")
+		printJob->start();
 }
 
 void WebRESTHandler::restModifyJob(WebRESTContext& context)
 {
+	nlohmann::json req = context.jsonRequest();
+	std::string printerName = context.match()[1];
+	std::shared_ptr<Printer> printer = context.printerManager()->printer(printerName.c_str());
 
+	if (!printer)
+		throw WebErrors::not_found("Printer not found");
+
+	std::shared_ptr<PrintJob> printJob = printer->printJob();
+	if (!printJob)
+		throw WebErrors::not_found("Print job not found");
+	
+	if (req["state"].is_string())
+	{
+		std::string stateValue = req["state"].get<std::string>();
+		if (stateValue == "Stopped")
+		{
+			switch (printJob->state())
+			{
+				case PrintJob::State::Running:
+				case PrintJob::State::Paused:
+					printJob->stop();
+					break;
+				default:
+					;
+			}
+		}
+		else if (stateValue == "Paused")
+		{
+			if (printJob->state() == PrintJob::State::Running)
+				printJob->pause();
+		}
+		else if (stateValue == "Running")
+		{
+			if (printJob->state() != PrintJob::State::Running)
+				printJob->start();
+		}
+		else
+			throw WebErrors::bad_request("Unrecognized 'state' value");
+	}
+
+	context.send(boost::beast::http::status::no_content);
 }
 
 void WebRESTHandler::restGetJob(WebRESTContext& context)
 {
-
+	std::string printerName = context.match()[1];
+	std::shared_ptr<Printer> printer = context.printerManager()->printer(printerName.c_str());
 }
 
 void WebRESTHandler::restGetPrinterTemperatures(WebRESTContext& context)
@@ -345,16 +467,111 @@ void WebRESTHandler::restSetPrinterTemperatures(WebRESTContext& context)
 	
 void WebRESTHandler::octoprintGetVersion(WebRESTContext& context)
 {
-	context.send("1.0-dashprint", "text/plain");
+	context.send("{\"api\": \"0.1\", \"server\": \"1.0.0-dashprint\"}", "application/json");
 }
 
 void WebRESTHandler::octoprintUploadGcode(WebRESTContext& context)
 {
-	// TODO: Parse WWW form upload
-	// Fields:
-	// print: true/false
-	// path: destination path
-	// file: file data
+	// TODO: Support "path" parameter
+
+	std::unique_ptr<MultipartFormData> mp(context.multipartBody());
+	const void* fileData = nullptr;
+	size_t fileSize;
+	std::string fileName;
+	bool print = false;
+
+	if (!mp)
+		throw WebErrors::bad_request("multipart data expected");
+
+	mp->parse([&](const MultipartFormData::Headers_t& headers, const char* name, const void* data, uint64_t length) {
+		if (std::strcmp(name, "print") == 0)
+		{
+			if (length == 4 && std::memcmp(data, "true", 4) == 0)
+				print = true;
+		}
+		else if (std::strcmp(name, "file") == 0)
+		{
+			auto itCDP = headers.find("content-disposition");
+			if (itCDP != headers.end())
+			{
+				std::string value;
+				MultipartFormData::Headers_t params;
+
+				MultipartFormData::parseKV(itCDP->second.c_str(), value, params);
+				auto it = params.find("filename");
+
+				if (it != params.end())
+					fileName = it->second;
+			}
+
+			fileData = data;
+			fileSize = length;
+		}
+		return true;
+	});
+
+	if (!fileData || fileName.empty())
+		throw WebErrors::bad_request("missing fields");
+
+	fileName = context.fileManager()->saveFile(fileName.c_str(), fileData, fileSize);
+
+	nlohmann::json result = nlohmann::json::object();
+	result["done"] = true;
+
+	nlohmann::json local = nlohmann::json::object();
+	local["name"] = fileName;
+	local["origin"] = "local";
+	local["path"] = fileName;
+
+	nlohmann::json refs = {
+		"download", context.baseUrl() + "/api/v1/files/" + fileName,
+		"resource", context.baseUrl() + "/api/files/local/" + fileName
+	};
+
+	local["refs"] = refs;
+	result["files"] = { "local", local };
+
+	// TODO: Add location header!
+	context.send(result, WebRESTContext::http_status::created);
+}
+
+void WebRESTHandler::restListFiles(WebRESTContext& context)
+{
+	std::vector<FileManager::FileInfo> files = context.fileManager()->listFiles();
+	nlohmann::json result = nlohmann::json::array();
+
+	for (const FileManager::FileInfo& file : files)
+	{
+		nlohmann::json ff = nlohmann::json::object();
+
+		ff["name"] = file.name;
+		ff["length"] = file.length;
+		ff["mtime"] = file.modifiedTime;
+
+		result.push_back(ff);
+	}
+
+	context.send(result, WebRESTContext::http_status::ok);
+}
+
+void WebRESTHandler::restUploadFile(WebRESTContext& context)
+{
+	std::string name = context.match()[1];
+	
+	if (!context.fileBody().empty())
+		context.fileManager()->saveFile(name.c_str(), context.fileBody().c_str());
+	else
+		context.fileManager()->saveFile(name.c_str(), context.request().body().c_str(), context.request().body().length());
+
+	context.send(boost::beast::http::status::created);
+}
+
+void WebRESTHandler::restDownloadFile(WebRESTContext& context)
+{
+	std::string name = context.match()[1];
+	std::string path = context.fileManager()->getFilePath(name.c_str());
+
+	context.sendFile(path.c_str());
 }
 
 void WebRESTContext::send(http_status status, const std::map<std::string,std::string>& headers)
@@ -393,6 +610,28 @@ void WebRESTContext::send(const std::string& text, const char* contentType, http
 	res.body() = text;
 	res.prepare_payload();
 	
+	m_session->send(std::move(res));
+}
+
+void WebRESTContext::sendFile(const char* path, http_status status)
+{
+	boost::beast::error_code ec;
+	boost::beast::http::basic_file_body<boost::beast::file_posix>::value_type body;
+
+	body.open(path, boost::beast::file_mode::scan, ec);
+	if (!body.is_open())
+		throw WebErrors::not_found("Cannot open file");
+
+	auto size = body.size();
+
+	boost::beast::http::response<boost::beast::http::file_body> res{
+				std::piecewise_construct,
+				std::make_tuple(std::move(body)),
+				std::make_tuple(boost::beast::http::status::ok, m_request.version())};
+	res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+	res.content_length(size);
+	res.keep_alive(m_request.keep_alive());
+
 	m_session->send(std::move(res));
 }
 

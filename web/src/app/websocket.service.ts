@@ -139,6 +139,7 @@ export class WebsocketService {
       console.warn("Websocket connection went down");
 
       this.socket.onerror = null;
+      this.socket.onclose = null;
       this.socket.close();
       setTimeout(() => {
           console.debug("Reconnecting the websocket...");

@@ -20,9 +20,6 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/uuid_generators.hpp>
 
 #include <ctype.h>
 #include <termios.h>
@@ -35,7 +32,6 @@ static constexpr int MAX_LINENO = 10000;
 Printer::Printer(boost::asio::io_service &io)
 		: m_io(io), m_serial(io), m_reconnectTimer(io), m_timeoutTimer(io), m_temperatureTimer(io)
 {
-	regenerateApiKey();
 }
 
 Printer::~Printer()
@@ -47,7 +43,6 @@ void Printer::load(const boost::property_tree::ptree& tree)
 {
 	m_devicePath = tree.get<std::string>("device_path");
 	m_baudRate = tree.get<int>("baud_rate");
-	m_apiKey = tree.get<std::string>("api_key");
 	m_name = tree.get<std::string>("name");
 	m_printArea.width = tree.get<int>("width");
 	m_printArea.height = tree.get<int>("height");
@@ -61,7 +56,6 @@ void Printer::save(boost::property_tree::ptree& tree)
 {
 	tree.put("device_path", m_devicePath);
 	tree.put("baud_rate", m_baudRate);
-	tree.put("api_key", m_apiKey);
 	tree.put("name", m_name);
 	tree.put("stopped", m_state == State::Stopped);
 	tree.put("width", m_printArea.width);
@@ -672,6 +666,7 @@ ignore:
 	}
 }
 
+/*
 void Printer::regenerateApiKey()
 {
 	static boost::uuids::random_generator gen;
@@ -679,6 +674,7 @@ void Printer::regenerateApiKey()
 
 	m_apiKey = boost::uuids::to_string(u);
 }
+*/
 
 std::map<std::string, Printer::Temperature> Printer::getTemperatures() const
 {

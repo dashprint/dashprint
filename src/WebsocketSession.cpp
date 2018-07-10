@@ -163,9 +163,8 @@ void WebsocketSession::doWrite()
 
 void WebsocketSession::printerManagerEvent()
 {
-	nlohmann::json event = {
-			{"event", "PrinterManager"}
-	};
+	nlohmann::json event;
+	event["event"]["PrinterManager"] = nlohmann::json::object();
 
 	raiseEvent(std::move(event));
 }

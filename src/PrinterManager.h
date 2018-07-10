@@ -41,6 +41,7 @@ public:
 
 	void saveSettings();
 	boost::signals2::signal<void()>& printerListChangeSignal() { return m_printerListChangeSignal; }
+	void regenerateApiKey();
 private:
 	void save();
 	void load();
@@ -52,6 +53,7 @@ private:
 	std::string m_defaultPrinter;
 
 	boost::signals2::signal<void()> m_printerListChangeSignal;
+	std::string m_octoprintApiKey;
 };
 
 #endif /* PRINTERMANAGER_H */

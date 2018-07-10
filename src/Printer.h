@@ -50,9 +50,6 @@ public:
 
 	const char* name() const { return m_name.c_str(); }
 	void setName(const char* name) { m_name = name; }
-
-	const char* apiKey() const { return m_apiKey.c_str(); }
-	void regenerateApiKey();
 	
 	// Connect to the printer and maintain the connection
 	void start();
@@ -165,7 +162,6 @@ private:
 	// M115 result
 	std::map<std::string, std::string> m_baseParameters;
 
-	std::string m_apiKey;
 	std::list<TemperaturePoint> m_temperatures;
 	mutable std::mutex m_temperaturesMutex;
 

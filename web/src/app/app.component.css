@@ -21,3 +21,12 @@
     padding: 20ex;
     font-size: 400%;
 }
+
+.printer-temperatures {
+    width: 430px;
+    height: 350px;
+}
+
+#temperatures-graph {
+    padding: 1ex;
+}

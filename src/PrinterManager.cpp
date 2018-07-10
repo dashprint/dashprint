@@ -13,6 +13,9 @@
 
 #include "PrinterManager.h"
 #include <boost/log/trivial.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 #include "util.h"
 
 PrinterManager::PrinterManager(boost::asio::io_service& io, boost::property_tree::ptree& config)
@@ -36,6 +39,8 @@ void PrinterManager::save()
 		it.second->save(printer);
 	}
 
+	m_config.put("octoprint_api_key", m_octoprintApiKey);
+
 	saveConfig();
 }
 
@@ -58,12 +63,24 @@ void PrinterManager::load()
 			m_printers.emplace(it.first, printer);
 		}
 	}
+
+	m_octoprintApiKey = m_config.get("octoprint_api_key", "");
+	if (m_octoprintApiKey.empty())
+		regenerateApiKey();
 }
 
 void PrinterManager::saveSettings()
 {
 	std::unique_lock<std::mutex> lock(m_printersMutex);
 	save();
+}
+
+void PrinterManager::regenerateApiKey()
+{
+	static boost::uuids::random_generator gen;
+	boost::uuids::uuid u = gen();
+
+	m_octoprintApiKey = boost::uuids::to_string(u);
 }
 
 std::shared_ptr<Printer> PrinterManager::newPrinter()

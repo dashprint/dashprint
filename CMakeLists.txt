@@ -42,6 +42,7 @@ set(dashprint_sources
     src/PrintJob.cpp
     src/PrintJob.h
     src/MultipartFormData.cpp
+    src/FileManager.cpp
 )
 
 include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/numeric/conversion/include)

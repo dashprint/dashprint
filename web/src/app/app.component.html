@@ -57,9 +57,9 @@
         <button (click)="editPrinter(selectedPrinter)" class="btn btn-outline">Edit</button>
       </div>
 
-      <div *ngIf="temperatures" class="printer-temperatures">
-        <p *ngIf="temperatures.T">Tool: {{ temperatures.T.current.toFixed(1) }} C</p>
-        <p *ngIf="temperatures.B">Bed: {{ temperatures.B.current.toFixed(1) }} C</p>
+      <div *ngIf="temperatures" class="printer-temperatures card">
+        <div class="card-header">Temperatures</div>
+        <canvas width="400" height="250" id="temperatures-graph" #temperaturesGraph></canvas>
       </div>
 
       </div>

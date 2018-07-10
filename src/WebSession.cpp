@@ -439,6 +439,6 @@ void WebSession::handleRESTCall()
 	std::string resource = m_request.target().substr(4).to_string();
 	
 	// Route the request
-	if (!WebRESTHandler::instance().call(resource, m_request, this))
+	if (!WebRESTHandler::instance().call(resource, m_request, m_bodyFile, this))
 		throw WebErrors::not_found(m_request.target().to_string());
 }

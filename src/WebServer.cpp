@@ -17,8 +17,8 @@
 #include "WebSession.h"
 
 
-WebServer::WebServer(boost::asio::io_service& io, PrinterManager& printerManager)
-: m_io(io), m_printerManager(printerManager), m_acceptor(io), m_socket(io)
+WebServer::WebServer(boost::asio::io_service& io, PrinterManager& printerManager, FileManager& fileManager)
+: m_io(io), m_printerManager(printerManager), m_fileManager(fileManager), m_acceptor(io), m_socket(io)
 {
 }
 

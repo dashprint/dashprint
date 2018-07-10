@@ -10,7 +10,7 @@
 #include <mutex>
 #include "Printer.h"
 
-class PrintJob : std::enable_shared_from_this<PrintJob>
+class PrintJob : public std::enable_shared_from_this<PrintJob>
 {
 public:
 	PrintJob(std::shared_ptr<Printer> printer, const char* file);
