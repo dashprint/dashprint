@@ -1,6 +1,3 @@
-[submodule "src/boost"]
-	path = src/boost
-	url = https://github.com/boostorg/boost.git
 [submodule "web"]
 	path = web
 	url = ../dashprint-web.git
