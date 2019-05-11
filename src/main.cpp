@@ -8,11 +8,12 @@
 #include <cstdlib>
 #include <boost/log/trivial.hpp>
 #include "util.h"
-#include "WebServer.h"
+#include "web/WebServer.h"
 #include "PrinterManager.h"
 #include "FileManager.h"
+#include "web/WebRequest.h"
+#include "binfile/api.h"
 
-static void discoverPrinters();
 static void runApp();
 static void sanityCheck();
 
@@ -24,15 +25,6 @@ int main(int argc, const char** argv)
 	{
 		sanityCheck();
 		
-		if (argc > 1)
-		{
-			if (std::strcmp(argv[1], "--discover") == 0)
-			{
-				discoverPrinters();
-				return 0;
-			}
-		}
-		
 		loadConfig();
 		runApp();
 	}
@@ -43,19 +35,6 @@ int main(int argc, const char** argv)
 	}
 	
 	return 0;
-}
-
-void discoverPrinters()
-{
-	std::vector<DiscoveredPrinter> printers;
-
-	PrinterDiscovery::enumerateAll(printers);
-
-	for (const DiscoveredPrinter& p : printers)
-	{
-		std::cout << "Device path: " << p.devicePath << std::endl;
-		std::cout << "Device name: " << p.deviceName << std::endl;
-	}
 }
 
 static std::string localStoragePath()
@@ -71,8 +50,24 @@ void runApp()
 	boost::asio::io_service io;
 	FileManager fileManager(localStoragePath().c_str());
 	PrinterManager printerManager(io, g_config);
-	WebServer webServer(io, printerManager, fileManager);
+	WebServer webServer(io);
 	
+	webServer.get(".*", [](WebRequest& req, WebResponse& res) {
+		if (req.header(boost::beast::http::field::accept_encoding).find("gzip") != boost::string_view::npos)
+		{
+			// Provide compressed file
+			auto fileData = binfile::CompressedAsset(req.path().c_str());
+			if (!fileData.has_content())
+				throw WebErrors::not_found("File not found");
+		}
+		else
+		{
+			// Provide uncompressed file
+			auto fileData = binfile::Asset(req.path().c_str());
+			if (!fileData.has_content())
+				throw WebErrors::not_found("File not found");
+		}
+	});
 	webServer.start(g_config.get<int>("WebServer.port", 8970));
 	
 	io.run();

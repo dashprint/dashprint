@@ -36,36 +36,37 @@ private:
 	bool handleRequest();
 	bool handleAuthentication();
 	bool handleExpect100Continue();
-	void sendWWWAuthenticate();
+	// void sendWWWAuthenticate();
 	
-	void handleRESTCall();
 	static boost::beast::string_view mime_type(boost::beast::string_view path);
 	static std::string cachePath();
-	static void parseAuthenticationKV(std::string in, std::map<std::string,std::string>& out);
+	// static void parseAuthenticationKV(std::string in, std::map<std::string,std::string>& out);
 
 	// Returns true if given HTTP request target doesn't use standard authentication
 	// but rather an API key passed in HTTP headers.
-	static bool usesOctoPrintApiKey(boost::beast::string_view url);
+	// static bool usesOctoPrintApiKey(boost::beast::string_view url);
 protected:
 	template<bool isRequest, class Body, class Fields> void send(boost::beast::http::message<isRequest, Body, Fields>&& response);
 	const std::string& bodyFile() const { return m_bodyFile; }
-private:
+
 	WebServer* m_server;
 	boost::asio::ip::tcp::socket m_socket;
 	std::unique_ptr<boost::beast::http::request_parser<boost::beast::http::string_body>> m_requestParser;
 	boost::beast::http::request<boost::beast::http::string_body> m_request;
 	boost::beast::flat_buffer m_buffer;
-	boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
+	boost::asio::strand<boost::asio::executor> m_strand;
 	boost::optional<boost::asio::yield_context> m_yield;
 
 	std::string m_bodyFile;
 	
-	friend class WebRESTHandler;
-	friend class WebRESTContext;
+	// friend class WebRESTHandler;
+	// friend class WebRESTContext;
+	friend class WebResponse;
 };
 
 extern template void WebSession::send(boost::beast::http::response<boost::beast::http::empty_body>&& response);
 extern template void WebSession::send(boost::beast::http::response<boost::beast::http::string_body>&& response);
+extern template void WebSession::send(boost::beast::http::response<boost::beast::http::file_body>&& response);
 
 #define DECLARE_EXCEPTION_TYPE(name) class name : public std::runtime_error { using std::runtime_error::runtime_error; }
 

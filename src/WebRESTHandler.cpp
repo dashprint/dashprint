@@ -463,7 +463,43 @@ void WebRESTHandler::restSetPrinterTemperatures(WebRESTContext& context)
 	std::shared_ptr<Printer> printer = context.printerManager()->printer(name.c_str());
 	if (!printer)
 		throw WebErrors::not_found("Printer not found");
+
+	if (printer->state() != Printer::State::Connected)
+		throw WebErrors::bad_request("Printer not connected");
+
+	nlohmann::json changes = context.jsonRequest();
+	if (!changes.is_object())
+		throw WebErrors::bad_request("JSON object expected");
+
+	int commandsToGo = 0;
+	for (nlohmann::json::iterator it = changes.begin(); it != changes.end(); it++)
+	{
+		std::string key = it.key();
+		int temp = it.value().get<int>();
+		std::string gcode;
+
+		if (key == "T")
+			gcode = "M104 S";
+		else if (key == "B")
+			gcode = "M140 S";
+		else
+			throw WebErrors::bad_request("Unknown temp target key");
+
+		gcode += std::to_string(temp);
+
+		commandsToGo++;
+		printer->sendCommand(gcode.c_str(), [&](const std::vector<std::string>& reply) {
+			// TODO: Are there ever any errors reported back by the printers here?
+
+			commandsToGo--;
+			if (commandsToGo == 0)
+				context.send(WebRESTContext::http_status::no_content);
+		});
 	}
+
+	if (commandsToGo == 0)
+		context.send(WebRESTContext::http_status::no_content);
+}
 	
 void WebRESTHandler::octoprintGetVersion(WebRESTContext& context)
 {

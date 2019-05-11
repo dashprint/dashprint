@@ -18,10 +18,12 @@
 #include "WebSession.h"
 #include "WebServer.h"
 #include "dashprint_config.h"
-#include "WebRESTHandler.h"
-#include "file_body_posix.ipp"
+//#include "WebRESTHandler.h"
+//#include "file_body_posix.ipp"
 #include "nlohmann/json.hpp"
-#include "WebsocketSession.h"
+//#include "WebsocketSession.h"
+#include "WebRequest.h"
+#include "WebResponse.h"
 #include <cstdlib>
 #include <unistd.h>
 
@@ -90,22 +92,11 @@ std::string WebSession::processLargeBody(uint64_t length)
 	return path.get();
 }
 
-bool WebSession::usesOctoPrintApiKey(boost::beast::string_view url)
-{
-	return boost::algorithm::starts_with(url, "/api/")
-			&& ! boost::algorithm::starts_with(url, "/api/v1/");
-}
-
 bool WebSession::handleExpect100Continue()
 {
 	if (m_requestParser->get()[boost::beast::http::field::expect] == "100-continue")
 	{
-		if (!usesOctoPrintApiKey(m_requestParser->get().target()))
-		{
-			if (!handleAuthentication())
-				return false;
-		}
-
+		// TODO: Check if we have a handler for this URL and method
 		boost::beast::http::response<boost::beast::http::empty_body> res{boost::beast::http::status::continue_,
 																		 m_requestParser->get().version()};
 		res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
@@ -147,19 +138,14 @@ void WebSession::doRead()
 			else
 			{
 				m_bodyFile.clear();
-				boost::beast::http::async_read(m_socket, m_buffer, m_requestParser->base(), *m_yield);
-			}
-
-			if (!usesOctoPrintApiKey(m_requestParser->get().target()))
-			{
-				if (!handleAuthentication())
-					continue;
+				boost::beast::http::async_read(m_socket, m_buffer, *m_requestParser, *m_yield);
 			}
 
 			m_request = m_requestParser->release();
 
 			if (!handleRequest())
-				break;
+				/*break*/;
+			break;
 		}
 		catch (const std::exception &e)
 		{
@@ -191,6 +177,7 @@ bool WebSession::handleAuthentication()
 	return true;
 }
 
+/*
 void WebSession::parseAuthenticationKV(std::string in, std::map<std::string,std::string>& out)
 {
 	boost::algorithm::trim(in);
@@ -219,6 +206,7 @@ void WebSession::sendWWWAuthenticate()
 {
 	// TODO: send WWW-Authenticate
 }
+*/
 
 std::string WebSession::cachePath()
 {
@@ -266,10 +254,12 @@ void WebSession::send(boost::beast::http::message<isRequest, Body, Fields>&& res
 	auto self = shared_from_this();
 
 	boost::beast::http::async_write(m_socket, *sp, *m_yield);
+	run();
 }
 
 template void WebSession::send(boost::beast::http::response<boost::beast::http::empty_body>&& response);
 template void WebSession::send(boost::beast::http::response<boost::beast::http::string_body>&& response);
+template void WebSession::send(boost::beast::http::response<boost::beast::http::file_body>&& response);
 
 bool WebSession::handleRequest()
 {
@@ -285,13 +275,24 @@ bool WebSession::handleRequest()
 	try
 	{
 		// Request path must be absolute and not contain "..".
-		if( m_request.target().empty() ||
+		if (m_request.target().empty() ||
 			m_request.target()[0] != '/' ||
 			m_request.target().find("..") != boost::beast::string_view::npos)
 		{
 			throw WebErrors::bad_request("Illegal request URL");
 		}
 
+		boost::smatch matches;
+		WebRouter::handler_t handler;
+
+		if (!m_server->findHandler(std::string(m_request.target()).c_str(), m_request.method(), handler, matches))
+			throw WebErrors::not_found("Not found");
+
+		WebRequest req(m_request, m_bodyFile, matches);
+		WebResponse res(shared_from_this());
+		handler(req, res);
+
+/*
 		// REST API call handling
 		// "Our" API requests
 		if (m_request.target().starts_with("/api/v1/"))
@@ -373,6 +374,7 @@ bool WebSession::handleRequest()
 
 			send(std::move(res));
 		}
+		*/
 	}
 	catch (const WebErrors::not_found& e)
 	{
@@ -433,6 +435,7 @@ boost::beast::string_view WebSession::mime_type(boost::beast::string_view path)
     return "application/text";
 }
 
+/*
 void WebSession::handleRESTCall()
 {
 	// Remove "/api"
@@ -442,3 +445,4 @@ void WebSession::handleRESTCall()
 	if (!WebRESTHandler::instance().call(resource, m_request, m_bodyFile, this))
 		throw WebErrors::not_found(m_request.target().to_string());
 }
+*/

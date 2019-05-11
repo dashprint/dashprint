@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.1)
 
 option(WITH_UDEV "Enable udev-based device detection" ON)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 enable_language(ASM)
 
 find_package(Threads)
@@ -20,32 +20,54 @@ if (WITH_UDEV)
     include_directories(${UDEV_INCLUDE_DIR})
 endif (WITH_UDEV)
 
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost 1.66 REQUIRED COMPONENTS system regex filesystem iostreams log coroutine)
+include_directories(${Boost_INCLUDE_DIRS})
+
+find_package(ZLIB REQUIRED)
+include_directories(${ZLIB_INCLUDE_DIRS})
+
+add_executable(binfile src/binfile/binfile.cpp)
+target_link_libraries(binfile ${Boost_LIBRARIES} ${ZLIB_LIBRARIES})
+
+add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/webdata.cpp"
+    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/binfile" "${CMAKE_SOURCE_DIR}/web/dist" "${CMAKE_BINARY_DIR}/webdata.cpp"
+    DEPENDS binfile
+    COMMENT "Compressing web resources..."
+)
+
 # Detect 'mmal_core mmal_util mmal_vc_client vcos bcm_host' for RPi hi-perf camera
 
 # Boost is typically WAY too old on Raspbian, so we carry our own version
 # which is used as a header-only library.
 #find_package(Boost 1.55.0 REQUIRED system)
 
-add_definitions(-DBOOST_ALL_NO_LIB -DBOOST_ERROR_CODE_HEADER_ONLY -DBOOST_CHRONO_HEADER_ONLY -DBOOST_SYSTEM_NO_DEPRECATED -DBOOST_BEAST_USE_POSIX_FILE=1 -DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
+# add_definitions(-DBOOST_ALL_NO_LIB -DBOOST_ERROR_CODE_HEADER_ONLY -DBOOST_CHRONO_HEADER_ONLY -DBOOST_SYSTEM_NO_DEPRECATED -DBOOST_BEAST_USE_POSIX_FILE=1 -DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
+
+include_directories(${CMAKE_SOURCE_DIR}/src)
 
 set(dashprint_sources
 	src/main.cpp
     src/PrinterDiscovery.cpp
     src/StaticPrinterDiscovery.cpp
-    src/WebServer.cpp
-    src/WebSession.cpp
-    src/WebsocketSession.cpp
-    src/WebRESTHandler.cpp
+    src/web/WebServer.cpp
+    src/web/WebSession.cpp
+    src/web/WebRequest.cpp
+    src/web/WebResponse.cpp
+    src/web/WebRouter.cpp
+    src/web/MultipartFormData.cpp
+    #src/WebsocketSession.cpp
+    #src/WebRESTHandler.cpp
     src/Printer.cpp
     src/PrinterManager.cpp
     src/util.cpp
     src/PrintJob.cpp
     src/PrintJob.h
-    src/MultipartFormData.cpp
     src/FileManager.cpp
+    ${CMAKE_BINARY_DIR}/webdata.cpp
 )
 
-include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/numeric/conversion/include)
+# include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/numeric/conversion/include)
 
 # Compile Boost.Filesystem
 set(boost_sources
@@ -59,7 +81,7 @@ set(boost_sources
 )
 
 # Compile Boost.Log
-include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/log/src)
+#include_directories(${CMAKE_SOURCE_DIR}/src/boost/libs/log/src)
 set(boost_sources ${boost_sources}
     src/boost/libs/log/src/attribute_name.cpp
     src/boost/libs/log/src/attribute_set.cpp
@@ -145,7 +167,7 @@ endif()
 FILE(GLOB children ${CMAKE_SOURCE_DIR}/src/boost/libs/*)
 FOREACH(child ${children})
 	IF(IS_DIRECTORY ${child})
-		include_directories(${child}/include)
+		#include_directories(${child}/include)
 	ENDIF()
 ENDFOREACH()
 
@@ -161,10 +183,10 @@ endif()
 configure_file("${CMAKE_SOURCE_DIR}/dashprint_config.h.in" "${CMAKE_BINARY_DIR}/dashprint_config.h")
 include_directories("${CMAKE_BINARY_DIR}")
 
-add_library(boost OBJECT ${boost_sources})
+#add_library(boost OBJECT ${boost_sources})
 
-add_executable(dashprint ${dashprint_sources} $<TARGET_OBJECTS:boost>)
-target_link_libraries(dashprint ${LINK_LIBRARIES})
+add_executable(dashprint ${dashprint_sources}) # $<TARGET_OBJECTS:boost>)
+target_link_libraries(dashprint ${LINK_LIBRARIES} ${Boost_LIBRARIES} ${ZLIB_LIBRARIES})
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/web/dist/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/dashprint/web")
 install(TARGETS dashprint DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")

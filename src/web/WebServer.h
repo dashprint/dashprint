@@ -14,28 +14,33 @@
 #ifndef WEBSERVER_H
 #define WEBSERVER_H
 #include <boost/asio.hpp>
-#include "PrinterManager.h"
-#include "FileManager.h"
+#include <boost/beast.hpp>
+#include <boost/regex.hpp>
+#include <list>
+#include "WebRouter.h"
 
 class WebSession;
 
-class WebServer {
+class WebServer : public WebRouter
+{
 public:
-	WebServer(boost::asio::io_service& io, PrinterManager& printerManager, FileManager& fileManager);
+	WebServer(boost::asio::io_service& io);
 	~WebServer();
 	
 	void start(int port);
-	PrinterManager* printerManager() { return &m_printerManager; }
-	FileManager* fileManager() { return &m_fileManager; }
+
+	
 private:
 	void doAccept();
 	void connectionAccepted(boost::system::error_code ec);
 private:
 	boost::asio::io_service& m_io;
-	PrinterManager& m_printerManager;
-	FileManager& m_fileManager;
+
 	boost::asio::ip::tcp::acceptor m_acceptor;
 	boost::asio::ip::tcp::socket m_socket;
+protected:
+
+	friend class WebSession;
 };
 
 #endif /* WEBSERVER_H */

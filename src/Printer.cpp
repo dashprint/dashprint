@@ -603,11 +603,11 @@ void Printer::processCommandEffects(const std::string& line)
 
 void Printer::processTargetTempSetting(const char* elem, const std::string& line)
 {
-	std::unique_lock<std::mutex> lock(m_temperaturesMutex);
+	// std::unique_lock<std::mutex> lock(m_temperaturesMutex);
 
 	try
 	{
-		Temperature& temp = getTemperatures()[elem];
+		Temperature temp = getTemperatures()[elem];
 		float value = std::stof(line.substr(6));
 
 		if (value != temp.target)
