@@ -48,6 +48,8 @@ protected:
 	template<bool isRequest, class Body, class Fields> void send(boost::beast::http::message<isRequest, Body, Fields>&& response);
 	const std::string& bodyFile() const { return m_bodyFile; }
 
+	boost::asio::ip::tcp::socket&& socket() { return std::move(m_socket); }
+
 	WebServer* m_server;
 	boost::asio::ip::tcp::socket m_socket;
 	std::unique_ptr<boost::beast::http::request_parser<boost::beast::http::string_body>> m_requestParser;
@@ -58,8 +60,7 @@ protected:
 
 	std::string m_bodyFile;
 	
-	// friend class WebRESTHandler;
-	// friend class WebRESTContext;
+	friend class WebRequest;
 	friend class WebResponse;
 };
 

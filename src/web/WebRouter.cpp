@@ -2,6 +2,7 @@
 #include "WebRequest.h"
 #include "WebSession.h"
 #include "WebServer.h"
+#include "WebResponse.h"
 #include <stdexcept>
 
 template<> void WebRouter::handle(method_t method, const char* regexp, handler_t handler)
@@ -26,11 +27,14 @@ std::shared_ptr<WebRouter> WebRouter::router(const char* route)
 
 void WebRouter::ws(const char* regexp, wshandler_t handler)
 {
-	handle(method_t::get, regexp, [=](WebRequest& req, WebResponse& res) {
+	handle(method_t::get, regexp, [=](WebRequest& req, WebResponse& resp) {
+
 		if (!boost::beast::websocket::is_upgrade(req.request()))
 			throw WebErrors::bad_request("WebSocket expected");
 
-		// TODO
+		std::shared_ptr<WebSocketHandler> h(new WebSocketHandler);
+		if (handler(*h, req, resp))
+			h->accept(req.request(), req.socket());
 	});
 }
 

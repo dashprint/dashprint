@@ -3,6 +3,11 @@
 #include "WebServer.h"
 #include "MultipartFormData.h"
 
+boost::asio::ip::tcp::socket&& WebRequest::socket()
+{
+	return m_webSession->socket();
+}
+
 nlohmann::json WebRequest::jsonRequest() const
 {
 	if (header(boost::beast::http::field::content_type) != "application/json")

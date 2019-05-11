@@ -14,8 +14,8 @@
 #include "web/WebRequest.h"
 #include "web/WebResponse.h"
 #include "binfile/api.h"
-#include "RestApi.h"
-#include "OctoprintRestApi.h"
+#include "api/RestApi.h"
+#include "api/OctoprintRestApi.h"
 
 static void runApp();
 static void sanityCheck();

@@ -5,6 +5,7 @@
 #include <boost/beast.hpp>
 #include <map>
 #include <memory>
+#include "WebSocketHandler.h"
 
 class WebRequest;
 class WebResponse;
@@ -13,7 +14,7 @@ class WebRouter
 {
 public:
 	typedef std::function<void(WebRequest&,WebResponse&)> handler_t;
-	typedef std::function<bool()> wshandler_t;
+	typedef std::function<bool(WebSocketHandler&,WebRequest&,WebResponse&)> wshandler_t;
 	typedef boost::beast::http::verb method_t;
 
 	template <typename Handler, typename... Args> void handle(method_t method, const char* regexp, Handler handler, Args... args)

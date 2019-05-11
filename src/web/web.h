@@ -1,4 +1,5 @@
 #include "WebServer.h"
 #include "WebRequest.h"
 #include "WebResponse.h"
+#include "WebSocketHandler.h"
 #include "MultipartFormData.h"

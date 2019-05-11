@@ -53,9 +53,10 @@ set(dashprint_sources
     src/web/WebResponse.cpp
     src/web/WebRouter.cpp
     src/web/MultipartFormData.cpp
+    src/web/WebSocketHandler.cpp
     #src/WebsocketSession.cpp
-    src/RestApi.cpp
-    src/OctoprintRestApi.cpp
+    src/api/RestApi.cpp
+    src/api/OctoprintRestApi.cpp
     src/Printer.cpp
     src/PrinterManager.cpp
     src/util.cpp

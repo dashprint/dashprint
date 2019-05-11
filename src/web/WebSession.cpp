@@ -264,93 +264,9 @@ bool WebSession::handleRequest()
 		if (!m_server->findHandler(std::string(m_request.target()).c_str(), m_request.method(), handler, matches))
 			throw WebErrors::not_found("Not found");
 
-		WebRequest req(m_request, m_bodyFile, matches);
+		WebRequest req(m_request, m_bodyFile, matches, shared_from_this());
 		WebResponse res(shared_from_this());
 		handler(req, res);
-
-/*
-		// REST API call handling
-		// "Our" API requests
-		if (m_request.target().starts_with("/api/v1/"))
-		{
-			// TODO: HTTP digest auth
-			handleRESTCall();
-			return true;
-		}
-		else if (m_request.target().starts_with("/api/"))
-		{
-			// TODO: OctoPrint compat request
-			// NOTE: Authentication via API key
-		}
-
-		// TODO: HTTP digest auth
-
-		if (m_request.target() == "/websocket" && boost::beast::websocket::is_upgrade(m_request))
-		{
-			std::make_shared<WebsocketSession>(m_server, std::move(m_socket))->accept(m_request);
-			// We need to break out of the loop, there will be no more HTTP requests on this socket
-			return false;
-		}
-
-		// Static file handling
-		if (m_request.method() != boost::beast::http::verb::post &&
-			m_request.method() != boost::beast::http::verb::get)
-		{
-			throw WebErrors::bad_request("Unsupported HTTP method");
-		}
-
-		std::string path = path_cat(WEBROOT, m_request.target());
-		if (m_request.target().back() == '/')
-			path.append("index.html");
-
-		boost::beast::error_code ec;
-		boost::beast::http::basic_file_body<boost::beast::file_posix>::value_type body;
-		bool gzip_used = false;
-
-		if (m_request.at(boost::beast::http::field::accept_encoding).find("gzip") != boost::string_view::npos)
-		{
-			// Try a .gz file
-			body.open((path + ".gz").c_str(), boost::beast::file_mode::scan, ec);
-			if (!ec)
-				gzip_used = true;
-		}
-
-		if (!body.is_open())
-			body.open(path.c_str(), boost::beast::file_mode::scan, ec);
-
-		// Handle the case where the file doesn't exist
-		if(ec)
-			throw WebErrors::not_found(m_request.target().to_string());
-
-		// Cache the size since we need it after the move
-		auto const size = body.size();
-
-		if (m_request.method() == boost::beast::http::verb::head)
-		{
-			response.result(boost::beast::http::status::ok);
-			response.content_length(size);
-			response.set(boost::beast::http::field::content_type, mime_type(path));
-
-			send(std::move(response));
-		}
-		else
-		{
-			// Respond to GET request
-			boost::beast::http::response<boost::beast::http::file_body> res{
-					std::piecewise_construct,
-					std::make_tuple(std::move(body)),
-					std::make_tuple(boost::beast::http::status::ok, m_request.version())};
-			res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
-			res.set(boost::beast::http::field::content_type, mime_type(path));
-			res.content_length(size);
-			res.keep_alive(m_request.keep_alive());
-
-			if (gzip_used)
-				res.set(boost::beast::http::field::content_encoding, "gzip");
-
-			send(std::move(res));
-		}
-		*/
 	}
 	catch (const WebErrors::not_found& e)
 	{

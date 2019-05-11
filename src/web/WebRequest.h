@@ -5,11 +5,16 @@
 #include "nlohmann/json.hpp"
 
 class MultipartFormData;
+class WebSession;
 
 class WebRequest
 {
 public:
-	WebRequest(const boost::beast::http::request<boost::beast::http::string_body>& request, const std::string& requestFile, const boost::smatch& matches) : m_request(request), m_requestFile(requestFile), m_matches(matches) {}
+	WebRequest(const boost::beast::http::request<boost::beast::http::string_body>& request,
+		const std::string& requestFile,
+		const boost::smatch& matches,
+		std::shared_ptr<WebSession> webSession)
+		: m_request(request), m_requestFile(requestFile), m_matches(matches), m_webSession(webSession) {}
 
 	const boost::beast::http::request<boost::beast::http::string_body>& request() const { return m_request; }
 
@@ -32,10 +37,16 @@ public:
 
 	std::string pathParam(unsigned int sub) const { return m_matches.str(sub); }
 	std::string pathParam(const char* sub) const { return m_matches.str(sub); }
+protected:
+	boost::asio::ip::tcp::socket&& socket();
 private:
 	const boost::beast::http::request<boost::beast::http::string_body>& m_request;
 	const std::string& m_requestFile;
 	const boost::smatch& m_matches;
+	std::shared_ptr<WebSession> m_webSession;
+
+	// for websockets
+	friend class WebRouter;
 };
 
 #endif
