@@ -22,11 +22,11 @@ std::string WebRequest::baseUrl() const
 
 MultipartFormData* WebRequest::multipartBody()
 {
-	std::string contentType = header(boost::beast::http::field::content_type);
+	std::string_view contentType = header(boost::beast::http::field::content_type);
 	std::string value;
 	MultipartFormData::Headers_t params;
 
-	MultipartFormData::parseKV(contentType.c_str(), value, params);
+	MultipartFormData::parseKV(contentType, value, params);
 
 	if (value != "multipart/form-data")
 		return nullptr;

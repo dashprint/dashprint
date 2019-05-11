@@ -14,6 +14,7 @@
 #include "web/WebRequest.h"
 #include "web/WebResponse.h"
 #include "binfile/api.h"
+#include "WebRESTHandler.h"
 
 static void runApp();
 static void sanityCheck();
@@ -43,34 +44,46 @@ static std::string localStoragePath()
 	boost::filesystem::path path(::getenv("HOME"));
 
 	path /= ".local/share/dashprint/files";
-	return path.string();
+	return path.generic_string();
 }
 
 void runApp()
 {
 	boost::asio::io_service io;
-	FileManager fileManager(localStoragePath().c_str());
+	FileManager fileManager(localStoragePath());
 	PrinterManager printerManager(io, g_config);
 	WebServer webServer(io);
+
+	routeRest(webServer.router("/api/v1/"), fileManager, printerManager);
+	// routeOctoprintRest(webServer.router("/api"), fileManager, printerManager);
 	
+	// Fallback for static resources
 	webServer.get(".*", [](WebRequest& req, WebResponse& res) {
-		if (req.header(boost::beast::http::field::accept_encoding).find("gzip") != boost::string_view::npos)
+		std::string_view path = req.path();
+
+		if (path == "/")
+			path = "index.html";
+		
+		if (req.header(boost::beast::http::field::accept_encoding).find("gzip") != std::string_view::npos)
 		{
 			// Provide compressed file
-			auto fileData = binfile::CompressedAsset(req.path().c_str());
+			auto fileData = binfile::compressedAsset(path);
 			if (!fileData.has_value())
 				throw WebErrors::not_found("File not found");
 
 			res.set(boost::beast::http::field::content_encoding, "gzip");
+			res.send(*fileData, WebResponse::mimeType(path));
 		}
 		else
 		{
 			// Provide uncompressed file
-			auto fileData = binfile::Asset(req.path().c_str());
+			auto fileData = binfile::asset(path);
 			if (!fileData.has_value())
 				throw WebErrors::not_found("File not found");
+			res.send(*fileData, WebResponse::mimeType(path));
 		}
 	});
+
 	webServer.start(g_config.get<int>("WebServer.port", 8970));
 	
 	io.run();

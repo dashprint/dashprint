@@ -1,6 +1,7 @@
 #include "WebRouter.h"
 #include "WebRequest.h"
 #include "WebSession.h"
+#include "WebServer.h"
 #include <stdexcept>
 
 void WebRouter::handle(method_t method, const char* regexp, handler_t handler)
@@ -14,7 +15,7 @@ std::shared_ptr<WebRouter> WebRouter::router(const char* route)
 {
 	if (std::strlen(route) == 0 || std::strcmp(route, "/") == 0)
 		throw std::logic_error("Invalid subroute");
-		
+
 	if (auto it = m_subroutes.find(route); it != m_subroutes.end())
 		return it->second;
 	

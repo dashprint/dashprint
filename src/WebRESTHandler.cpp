@@ -13,101 +13,92 @@
 
 #include "WebRESTHandler.h"
 #include <sstream>
-#include "WebSession.h"
-#include "WebServer.h"
+#include "web/web.h"
 #include "nlohmann/json.hpp"
 #include "PrinterDiscovery.h"
 #include "PrinterManager.h"
 #include "util.h"
-#include "MultipartFormData.h"
 #include "PrintJob.h"
 
-class WebRESTContext
+namespace
 {
-public:
-	WebRESTContext(const WebRESTHandler::reqtype_t& req, const std::string& fileBody, WebSession* session)
-	: m_request(req), m_session(session), m_fileBody(fileBody)
-	{	
-	}
-	
-	using http_status = boost::beast::http::status;
-	
-	void send(http_status status);
-	void send(http_status status, const std::map<std::string,std::string>& headers);
-	void send(const std::string& text, const char* contentType, http_status status = http_status::ok);
-	void send(const nlohmann::json& json, http_status status = http_status::ok);
-	void sendFile(const char* path, http_status status = http_status::ok);
-	
-	std::smatch& match() { return m_match; }
-
-	void setPrinterManager(PrinterManager* pm) { m_printerManager = pm; }
-	PrinterManager* printerManager() { return m_printerManager; }
-
-	FileManager* fileManager() { return m_fileManager; }
-	void setFileManager(FileManager* fm) { m_fileManager = fm; }
-
-	nlohmann::json jsonRequest() const
+	void restPrintersDiscover(WebRequest& req, WebResponse& resp)
 	{
-		if (m_request.at(boost::beast::http::field::content_type) != "application/json")
-			throw WebErrors::not_acceptable("JSON expected");
-
-		return nlohmann::json::parse(m_request.body());
-	}
-
-	std::string host() const
-	{
-		return m_request.at(boost::beast::http::field::host).to_string();
-	}
-
-	const std::string& fileBody() const
-	{
-		return m_fileBody;
-	}
-
-	MultipartFormData* multipartBody()
-	{
-		std::string contentType = m_request.at(boost::beast::http::field::content_type).to_string();
-		std::string value;
-		MultipartFormData::Headers_t params;
-
-		MultipartFormData::parseKV(contentType.c_str(), value, params);
-
-		if (value != "multipart/form-data")
-			return nullptr;
+		std::vector<DiscoveredPrinter> printers;
+		nlohmann::json result = nlohmann::json::array();
 		
-		if (params.find("boundary") == params.end())
-			return nullptr;
+		PrinterDiscovery::enumerateAll(printers);
 		
-		if (!m_fileBody.empty())
-			return new MultipartFormData(m_fileBody.c_str(), params["boundary"].c_str());
-		else
-			return new MultipartFormData(&m_request.body(), params["boundary"].c_str());
+		for (const DiscoveredPrinter& p : printers)
+		{
+			result.push_back({
+				{ "path", p.devicePath },
+				{ "name", p.deviceName },
+				{ "vendor", p.deviceVendor },
+				{ "serial", p.deviceSerial }
+			});
+		}
+		
+		resp.send(result);
 	}
 
-	const WebRESTHandler::reqtype_t& request()
+	nlohmann::json jsonFillPrinter(std::shared_ptr<Printer> printer, bool isDefault)
 	{
-		return m_request;
+		return nlohmann::json {
+				{"device_path", printer->devicePath()},
+				{"baud_rate",   printer->baudRate()},
+				{"stopped",     printer->state() == Printer::State::Stopped},
+				//{"api_key",     printer->apiKey()},
+				{"name",        printer->name()},
+				{"default",     isDefault},
+				{"connected",   printer->state() == Printer::State::Connected},
+				{"width", printer->printArea().width},
+				{"height", printer->printArea().height},
+				{"depth", printer->printArea().depth}
+		};
 	}
 
-	std::string baseUrl()
+	void restPrinter(WebRequest& req, WebResponse& resp, PrinterManager* printerManager)
 	{
-		// TODO: HTTPS
-		std::stringstream ss;
-		ss << "http://" << host();
+		std::string name = req.pathParam(1);
+		std::string defaultPrinter = printerManager->defaultPrinter();
+		std::shared_ptr<Printer> printer = printerManager->printer(name.c_str());
 
-		return ss.str();
+		if (!printer)
+			throw WebErrors::not_found("Unknown printer");
+
+		resp.send(jsonFillPrinter(printer, printer->name() == defaultPrinter));
 	}
-private:
-	const WebRESTHandler::reqtype_t& m_request;
-	WebSession* m_session;
-	std::smatch m_match;
-	PrinterManager* m_printerManager;
-	FileManager* m_fileManager;
-	std::string m_fileBody;
-};
+}
 
-WebRESTHandler::WebRESTHandler()
+void routeRest(std::shared_ptr<WebRouter> router, FileManager& fileManager, PrinterManager& printerManager)
 {
+	auto addArgs = [&](auto origHandler, auto... args) {
+		return [=](auto req, auto resp) {
+			return origHandler(req, resp, args...);
+		};
+	};
+
+	router->post("printers/discover", restPrintersDiscover);
+	//router->get("printers", passContext(restPrinters, printerManager));
+	//router->post("printers", passContext(restSetupNewPrinter));
+	
+	//router->put("printers/([^/]+)", passContext(restSetupPrinter));
+	router->get("printers/([^/]+)", addArgs(restPrinter, &printerManager));
+	/*router->delete_("printers/([^/]+)", passContext(restDeletePrinter));
+
+	router->post("printers/([^/]+)/job", passContext(restSubmitJob));
+	router->put("printers/([^/]+)/job", passContext(restModifyJob));
+	router->get("printers/([^/]+)/job", passContext((restGetJob));
+
+	router->put("printers/([^/]+)/temperatures", passContext(restSetPrinterTemperatures));
+	router->get("printers/([^/]+)/temperatures", passContext(restGetPrinterTemperatures));
+
+	router->post("files/([^/]+)", passContext(restUploadFile));
+	router->get("files/([^/]+)", passContext(restDownloadFile));
+	router->get("files", passContext(restListFiles));*/
+
+/*
 	using method = boost::beast::http::verb;
 	
 	m_restHandlers.assign({
@@ -140,79 +131,10 @@ WebRESTHandler::WebRESTHandler()
 		HandlerMapping{ std::regex("/version"), method::get, &WebRESTHandler::octoprintGetVersion },
 		HandlerMapping{ std::regex("/files/local"), method::post, &WebRESTHandler::octoprintUploadGcode },
 	});
+	*/
 }
 
-WebRESTHandler& WebRESTHandler::instance()
-{
-	static WebRESTHandler instance;
-	return instance;
-}
-
-bool WebRESTHandler::call(const std::string& url, const reqtype_t& req, const std::string& bodyFile, WebSession* session)
-{
-	WebRESTContext context(req, bodyFile, session);
-	
-	decltype(m_restHandlers)::iterator it = std::find_if(m_restHandlers.begin(), m_restHandlers.end(), [&](const HandlerMapping& handler) {
-		return req.method() == handler.method && std::regex_match(url, context.match(), handler.regex);
-	});
-	
-	if (it == m_restHandlers.end())
-		return false;
-
-	context.setPrinterManager(session->webServer()->printerManager());
-	context.setFileManager(session->webServer()->fileManager());
-
-	(this->*(it->handler))(context);
-	return true;
-}
-
-void WebRESTHandler::restPrintersDiscover(WebRESTContext& context)
-{
-	std::vector<DiscoveredPrinter> printers;
-	nlohmann::json result = nlohmann::json::array();
-	
-	PrinterDiscovery::enumerateAll(printers);
-	
-	for (const DiscoveredPrinter& p : printers)
-	{
-		result.push_back({
-			{ "path", p.devicePath },
-			{ "name", p.deviceName },
-			{ "vendor", p.deviceVendor },
-			{ "serial", p.deviceSerial }
-		});
-	}
-	
-	context.send(result);
-}
-
-static nlohmann::json jsonFillPrinter(std::shared_ptr<Printer> printer, bool isDefault)
-{
-	return nlohmann::json {
-			{"device_path", printer->devicePath()},
-			{"baud_rate",   printer->baudRate()},
-			{"stopped",     printer->state() == Printer::State::Stopped},
-			//{"api_key",     printer->apiKey()},
-			{"name",        printer->name()},
-			{"default",     isDefault},
-			{"connected",   printer->state() == Printer::State::Connected},
-			{"width", printer->printArea().width},
-			{"height", printer->printArea().height},
-			{"depth", printer->printArea().depth}
-	};
-}
-
-void WebRESTHandler::restPrinter(WebRESTContext& context)
-{
-	std::string name = context.match()[1].str();
-	std::string defaultPrinter = context.printerManager()->defaultPrinter();
-	std::shared_ptr<Printer> printer = context.printerManager()->printer(name.c_str());
-
-	if (!printer)
-		throw WebErrors::not_found("Unknown printer");
-
-	context.send(jsonFillPrinter(printer, printer->name() == defaultPrinter));
-}
+#if 0
 
 void WebRESTHandler::restDeletePrinter(WebRESTContext& context)
 {
@@ -675,3 +597,5 @@ void WebRESTContext::send(const nlohmann::json& json, http_status status)
 {
 	send(json.dump(), "application/json", status);
 }
+
+#endif

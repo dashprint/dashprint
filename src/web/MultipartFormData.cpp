@@ -178,18 +178,18 @@ void MultipartFormData::parseHeaders(size_t& offset, Headers_t& out)
 	}
 }
 
-void MultipartFormData::parseKV(const char* input, std::string& value, Headers_t& kv)
+void MultipartFormData::parseKV(std::string_view input, std::string& value, Headers_t& kv)
 {
-	const char* pos = std::strchr(input, ';');
-
-	if (!pos)
+	auto pos = input.find(';');
+	if (pos == std::string_view::npos)
 	{
 		// No extra params
 		value = input;
 		return;
 	}
-	value.assign(input, pos-input);
-	pos++; // Move past the semi-colon
+
+	value.assign(input.substr(0, pos));
+	input.remove_prefix(pos+1); // Move past the semi-colon
 
 	std::regex regexNoQuotes("\\s*([\\w\\-]+)=([^;]+);?");
 	std::regex regexQuotes("\\s*([\\w\\-]+)=\"([^\\\"]+)\";?");
@@ -198,19 +198,19 @@ void MultipartFormData::parseKV(const char* input, std::string& value, Headers_t
 	{
 		std::cmatch m1, m2;
 
-		std::regex_search(pos, m1, regexQuotes);
+		std::regex_search(input.begin(), input.end(), m1, regexQuotes);
 		if (!m1.empty() && m1.position() == 0)
 		{
 			kv.emplace(std::string(m1[1].first, m1[1].second), std::string(m1[2].first, m1[2].second));
-			pos += m1.length();
+			input.remove_prefix(m1.length());
 		}
 		else
 		{
-			std::regex_search(pos, m2, regexNoQuotes);
+			std::regex_search(input.begin(), input.end(), m2, regexNoQuotes);
 			if (!m2.empty() && m2.position() == 0)
 			{
 				kv.emplace(std::string(m2[1].first, m2[1].second), std::string(m2[2].first, m2[2].second));
-				pos += m2.length();
+				input.remove_prefix(m2.length());
 			}
 			else
 				break;

@@ -21,7 +21,7 @@ if (WITH_UDEV)
 endif (WITH_UDEV)
 
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.66 REQUIRED COMPONENTS system regex filesystem iostreams log coroutine)
+find_package(Boost 1.69 REQUIRED COMPONENTS system regex filesystem iostreams log coroutine)
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING -DBOOST_BEAST_USE_STD_STRING_VIEW)
@@ -54,7 +54,7 @@ set(dashprint_sources
     src/web/WebRouter.cpp
     src/web/MultipartFormData.cpp
     #src/WebsocketSession.cpp
-    #src/WebRESTHandler.cpp
+    src/WebRESTHandler.cpp
     src/Printer.cpp
     src/PrinterManager.cpp
     src/util.cpp

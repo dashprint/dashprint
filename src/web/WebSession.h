@@ -38,7 +38,6 @@ private:
 	bool handleExpect100Continue();
 	// void sendWWWAuthenticate();
 	
-	static boost::beast::string_view mime_type(boost::beast::string_view path);
 	static std::string cachePath();
 	// static void parseAuthenticationKV(std::string in, std::map<std::string,std::string>& out);
 
@@ -67,6 +66,7 @@ protected:
 extern template void WebSession::send(boost::beast::http::response<boost::beast::http::empty_body>&& response);
 extern template void WebSession::send(boost::beast::http::response<boost::beast::http::string_body>&& response);
 extern template void WebSession::send(boost::beast::http::response<boost::beast::http::file_body>&& response);
+extern template void WebSession::send(boost::beast::http::response<boost::beast::http::span_body<char const>>&& response);
 
 #endif /* WEBSESSION_H */
 

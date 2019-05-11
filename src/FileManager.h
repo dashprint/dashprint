@@ -2,17 +2,18 @@
 #define _FILEMANAGER_H
 #include <boost/filesystem.hpp>
 #include <string>
+#include <string_view>
 #include <ctime>
 #include <vector>
 
 class FileManager
 {
 public:
-	FileManager(const char* directory);
+	FileManager(std::string_view directory);
 
-	std::string saveFile(const char* name, const void* contents, size_t length);
-	std::string saveFile(const char* name, const char* otherfile);
-	std::string getFilePath(const char* name);
+	std::string saveFile(std::string_view, const void* contents, size_t length);
+	std::string saveFile(std::string_view, std::string_view otherfile);
+	std::string getFilePath(std::string_view name);
 
 	struct FileInfo
 	{

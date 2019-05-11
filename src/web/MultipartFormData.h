@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include <functional>
+#include <string_view>
 #include <stdint.h>
 #include <boost/iostreams/device/mapped_file.hpp>
 
@@ -18,7 +19,7 @@ public:
 
 	void parse(FieldHandler_t handler);
 
-	static void parseKV(const char* input, std::string& value, Headers_t& kv);
+	static void parseKV(std::string_view input, std::string& value, Headers_t& kv);
 private:
 	void parseHeaders(size_t& offset, Headers_t& out);
 

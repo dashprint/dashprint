@@ -38,7 +38,7 @@ void WebResponse::send(http_status status)
 	m_session->send(std::move(res));
 }
 
-void WebResponse::send(const std::string& text, const char* contentType, http_status status)
+void WebResponse::send(const std::string& text, std::string_view contentType, http_status status)
 {
 	boost::beast::http::response<boost::beast::http::string_body> res{status, m_session->m_request.version()};
 	
@@ -86,9 +86,9 @@ void WebResponse::send(const nlohmann::json& json, http_status status)
 	send(json.dump(), "application/json", status);
 }
 
-void WebResponse::send(std::string_view data, const char* contentType, http_status status)
+void WebResponse::send(std::string_view data, std::string_view contentType, http_status status)
 {
-	boost::beast::http::response<boost::beast::http::span_body<char>> res{status, m_session->m_request.version()};
+	boost::beast::http::response<boost::beast::http::span_body<char const>> res{status, m_session->m_request.version()};
 
 	res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
 	res.set(boost::beast::http::field::content_type, contentType);
@@ -106,4 +106,32 @@ void WebResponse::send(std::string_view data, const char* contentType, http_stat
 void WebResponse::set(boost::beast::http::field hdr, std::string_view value)
 {
 	m_headers.insert({hdr, value});
+}
+
+std::string_view WebResponse::mimeType(std::string_view path)
+{
+    using boost::beast::iequals;
+    auto const ext = [&path]
+    {
+        auto const pos = path.rfind(".");
+        if(pos == std::string_view::npos)
+            return std::string_view{};
+        return path.substr(pos);
+    }();
+    if(iequals(ext, ".htm"))  return "text/html";
+    if(iequals(ext, ".html")) return "text/html";
+	if(iequals(ext, ".xhtml")) return "application/xhtml+xml";
+    if(iequals(ext, ".css"))  return "text/css";
+    if(iequals(ext, ".txt"))  return "text/plain";
+    if(iequals(ext, ".js"))   return "application/javascript";
+    if(iequals(ext, ".json")) return "application/json";
+    if(iequals(ext, ".xml"))  return "application/xml";
+    if(iequals(ext, ".png"))  return "image/png";
+    if(iequals(ext, ".jpeg")) return "image/jpeg";
+    if(iequals(ext, ".jpg"))  return "image/jpeg";
+    if(iequals(ext, ".gif"))  return "image/gif";
+    if(iequals(ext, ".ico"))  return "image/vnd.microsoft.icon";
+    if(iequals(ext, ".svg"))  return "image/svg+xml";
+    if(iequals(ext, ".svgz")) return "image/svg+xml";
+    return "application/text";
 }

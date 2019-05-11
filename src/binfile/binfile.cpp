@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <vector>
 #include <boost/filesystem.hpp>
-#include <boost/iostreams/filter/zlib.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -56,7 +56,7 @@ void writeFiles(fs::path sourceDir, const std::vector<std::string>& files, std::
 
 		// generate compressed string
 		boost::iostreams::filtering_ostreambuf fos;
-		fos.push(boost::iostreams::zlib_compressor(boost::iostreams::zlib::best_compression));
+		fos.push(boost::iostreams::gzip_compressor(boost::iostreams::zlib::best_compression));
 		fos.push(cstring_filter<char>());
 		fos.push(out);
 
@@ -79,43 +79,43 @@ void writeFiles(fs::path sourceDir, const std::vector<std::string>& files, std::
 	out << R"cpp(
 		namespace binfile {
 
-		std::optional<std::string_view> CompressedAsset(const char* fname)
+		std::optional<std::string_view> compressedAsset(std::string_view fname)
 		{
-			if (*fname == '/')
-				fname++;
+			if (fname.length() > 0 && fname[0] == '/')
+				fname = fname.substr(1);
 			if (auto it = fileData.find(fname); it != fileData.end())
 				return std::get<std::string_view>(it->second);
 
 			return std::optional<std::string_view>();
 		}
 
-		std::optional<std::vector<uint8_t>> Asset(const char* fname)
+		std::optional<std::string> asset(std::string_view fname)
 		{
-			if (*fname == '/')
-				fname++;
-				
+			if (fname.length() > 0 && fname[0] == '/')
+				fname = fname.substr(1);
+
 			if (auto it = fileData.find(fname); it != fileData.end())
 			{
-				std::vector<uint8_t> uncompressed(std::get<uintptr_t>(it->second));
-				z_stream zs;
-
-				if (inflateInit(&zs) != Z_OK)
-					return std::optional<std::vector<uint8_t>>();
+				std::string uncompressed(std::get<uintptr_t>(it->second), char(0));
+				z_stream zs = {0};
 
 				zs.next_in = (Bytef*) std::get<std::string_view>(it->second).data();
 				zs.avail_in = std::get<std::string_view>(it->second).size();
-				zs.next_out = uncompressed.data();
+				zs.next_out = (Bytef*) uncompressed.data();
 				zs.avail_out = uncompressed.size();
 
+				if (inflateInit2(&zs, 16+MAX_WBITS) != Z_OK)
+					return std::optional<std::string>();
+
 				if (inflate(&zs, Z_FINISH) != Z_OK)
-					return std::optional<std::vector<uint8_t>>();
+					return std::optional<std::string>();
 
 				inflateEnd(&zs);
 				
 				return std::move(uncompressed);
 			}
 			
-			return std::optional<std::vector<uint8_t>>();
+			return std::optional<std::string>();
 		}
 
 		}
@@ -130,11 +130,11 @@ void iterateTree(fs::path sourcePath, std::vector<std::string>& files, std::stri
 	{
 		if (fs::is_directory(it->path()))
 		{
-			iterateTree(it->path(), files, prefix + "/" + it->path().filename().generic_string());
+			iterateTree(it->path(), files, prefix + it->path().filename().generic_string() + "/");
 		}
 		else
 		{
-			std::string path = prefix + "/" + it->path().filename().generic_string();
+			std::string path = prefix + it->path().filename().generic_string();
 			files.push_back(path);
 		}
 	}

@@ -17,10 +17,12 @@ public:
 	
 	void send(http_status status);
 	void send(http_status status, const std::map<std::string,std::string>& headers);
-	void send(const std::string& text, const char* contentType, http_status status = http_status::ok);
-	void send(std::string_view data, const char* contentType, http_status status = http_status::ok);
+	void send(const std::string& text, std::string_view contentType, http_status status = http_status::ok);
+	void send(std::string_view data, std::string_view contentType, http_status status = http_status::ok);
 	void send(const nlohmann::json& json, http_status status = http_status::ok);
 	void sendFile(const char* path, http_status status = http_status::ok);
+
+	static std::string_view mimeType(std::string_view path);
 private:
 	std::shared_ptr<WebSession> m_session;
 	std::map<boost::beast::http::field, std::string_view> m_headers;

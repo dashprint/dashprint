@@ -3,16 +3,16 @@
 #include <stdexcept>
 #include <boost/iostreams/device/mapped_file.hpp>
 
-FileManager::FileManager(const char* directory)
-: m_path(directory)
+FileManager::FileManager(std::string_view directory)
+: m_path(std::string(directory))
 {
-	boost::filesystem::create_directories(directory);
+	boost::filesystem::create_directories(m_path);
 }
 
-std::string FileManager::saveFile(const char* name, const void* contents, size_t length)
+std::string FileManager::saveFile(std::string_view name, const void* contents, size_t length)
 {
 	boost::system::error_code ec;
-	std::string safeName = name;
+	std::string safeName = std::string(name);
 
 	std::transform(safeName.begin(), safeName.end(), safeName.begin(), [](char c) {
 		if (c == '/' || c == boost::filesystem::path::preferred_separator)
@@ -38,18 +38,18 @@ std::string FileManager::saveFile(const char* name, const void* contents, size_t
 	return safeName;
 }
 
-std::string FileManager::saveFile(const char* name, const char* otherfile)
+std::string FileManager::saveFile(std::string_view name, std::string_view otherfile)
 {
-	boost::iostreams::mapped_file mapping(otherfile, std::ios_base::in);
+	boost::iostreams::mapped_file mapping(std::string(otherfile), std::ios_base::in);
 	if (!mapping.is_open())
 		throw std::runtime_error("Cannot read file");
 
 	return saveFile(name, mapping.const_data(), mapping.size());
 }
 
-std::string FileManager::getFilePath(const char* name)
+std::string FileManager::getFilePath(std::string_view name)
 {
-	return (m_path / name).generic_string();
+	return (m_path / std::string(name)).generic_string();
 }
 
 std::vector<FileManager::FileInfo> FileManager::listFiles()

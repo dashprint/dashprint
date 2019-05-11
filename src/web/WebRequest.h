@@ -22,10 +22,10 @@ public:
 
 	// E.g. http://myserver
 	std::string baseUrl() const;
-	std::string host() const { return header(boost::beast::http::field::host); }
-	std::string path() const { return std::string(m_request.target()); }
+	std::string_view host() const { return header(boost::beast::http::field::host); }
+	std::string_view path() const { return m_request.target(); }
 
-	std::string header(boost::beast::http::field hdr) const { return m_request.at(hdr).to_string(); }
+	std::string_view header(boost::beast::http::field hdr) const { return m_request[hdr]; }
 
 	// Returns the MIME multi-part body or nullptr
 	MultipartFormData* multipartBody();

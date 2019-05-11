@@ -13,6 +13,7 @@
 
 #ifndef WEBRESTHANDLER_H
 #define WEBRESTHANDLER_H
+/*
 #include <boost/beast.hpp>
 #include <regex>
 #include <vector>
@@ -61,6 +62,15 @@ private:
 	};
 	std::vector<HandlerMapping> m_restHandlers;
 };
+*/
+
+#include "web/WebRequest.h"
+#include "web/WebResponse.h"
+#include "web/WebRouter.h"
+#include "FileManager.h"
+#include "PrinterManager.h"
+
+void routeRest(std::shared_ptr<WebRouter> router, FileManager& fileManager, PrinterManager& printerManager);
 
 #endif /* WEBRESTHANDLER_H */
 

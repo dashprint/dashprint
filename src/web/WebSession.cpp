@@ -220,28 +220,6 @@ void WebSession::doClose()
 	m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
 }
 
-static std::string path_cat(boost::beast::string_view base, boost::beast::string_view path)
-{
-    if(base.empty())
-        return path.to_string();
-    std::string result = base.to_string();
-#if BOOST_MSVC
-    char constexpr path_separator = '\\';
-    if(result.back() == path_separator)
-        result.resize(result.size() - 1);
-    result.append(path.data(), path.size());
-    for(auto& c : result)
-        if(c == '/')
-            c = path_separator;
-#else
-    char constexpr path_separator = '/';
-    if(result.back() == path_separator)
-        result.resize(result.size() - 1);
-    result.append(path.data(), path.size());
-#endif
-    return result;
-}
-
 
 template<bool isRequest, class Body, class Fields>
 void WebSession::send(boost::beast::http::message<isRequest, Body, Fields>&& response)
@@ -257,6 +235,7 @@ void WebSession::send(boost::beast::http::message<isRequest, Body, Fields>&& res
 template void WebSession::send(boost::beast::http::response<boost::beast::http::empty_body>&& response);
 template void WebSession::send(boost::beast::http::response<boost::beast::http::string_body>&& response);
 template void WebSession::send(boost::beast::http::response<boost::beast::http::file_body>&& response);
+template void WebSession::send(boost::beast::http::response<boost::beast::http::span_body<char const>>&& response);
 
 bool WebSession::handleRequest()
 {
@@ -401,35 +380,6 @@ bool WebSession::handleRequest()
 	}
 
 	return true;
-}
-
-
-boost::beast::string_view WebSession::mime_type(boost::beast::string_view path)
-{
-    using boost::beast::iequals;
-    auto const ext = [&path]
-    {
-        auto const pos = path.rfind(".");
-        if(pos == boost::beast::string_view::npos)
-            return boost::beast::string_view{};
-        return path.substr(pos);
-    }();
-    if(iequals(ext, ".htm"))  return "text/html";
-    if(iequals(ext, ".html")) return "text/html";
-	if(iequals(ext, ".xhtml")) return "application/xhtml+xml";
-    if(iequals(ext, ".css"))  return "text/css";
-    if(iequals(ext, ".txt"))  return "text/plain";
-    if(iequals(ext, ".js"))   return "application/javascript";
-    if(iequals(ext, ".json")) return "application/json";
-    if(iequals(ext, ".xml"))  return "application/xml";
-    if(iequals(ext, ".png"))  return "image/png";
-    if(iequals(ext, ".jpeg")) return "image/jpeg";
-    if(iequals(ext, ".jpg"))  return "image/jpeg";
-    if(iequals(ext, ".gif"))  return "image/gif";
-    if(iequals(ext, ".ico"))  return "image/vnd.microsoft.icon";
-    if(iequals(ext, ".svg"))  return "image/svg+xml";
-    if(iequals(ext, ".svgz")) return "image/svg+xml";
-    return "application/text";
 }
 
 /*
