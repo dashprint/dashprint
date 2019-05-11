@@ -4,7 +4,7 @@
 #include "WebServer.h"
 #include <stdexcept>
 
-void WebRouter::handle(method_t method, const char* regexp, handler_t handler)
+template<> void WebRouter::handle(method_t method, const char* regexp, handler_t handler)
 {
 	m_mappings.emplace_back(url_mapping{
 		boost::regex(regexp), method, handler

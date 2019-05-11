@@ -12,12 +12,13 @@ class WebResponse
 public:
 	WebResponse(std::shared_ptr<WebSession> session);
 	using http_status = boost::beast::http::status;
+	using http_header = boost::beast::http::field;
 
 	void set(boost::beast::http::field hdr, std::string_view value);
 	
 	void send(http_status status);
 	void send(http_status status, const std::map<std::string,std::string>& headers);
-	void send(const std::string& text, std::string_view contentType, http_status status = http_status::ok);
+	// void send(const std::string& text, std::string_view contentType, http_status status = http_status::ok);
 	void send(std::string_view data, std::string_view contentType, http_status status = http_status::ok);
 	void send(const nlohmann::json& json, http_status status = http_status::ok);
 	void sendFile(const char* path, http_status status = http_status::ok);

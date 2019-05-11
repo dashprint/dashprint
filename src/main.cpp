@@ -14,7 +14,8 @@
 #include "web/WebRequest.h"
 #include "web/WebResponse.h"
 #include "binfile/api.h"
-#include "WebRESTHandler.h"
+#include "RestApi.h"
+#include "OctoprintRestApi.h"
 
 static void runApp();
 static void sanityCheck();
@@ -55,7 +56,7 @@ void runApp()
 	WebServer webServer(io);
 
 	routeRest(webServer.router("/api/v1/"), fileManager, printerManager);
-	// routeOctoprintRest(webServer.router("/api"), fileManager, printerManager);
+	routeOctoprintRest(webServer.router("/api"), fileManager, printerManager);
 	
 	// Fallback for static resources
 	webServer.get(".*", [](WebRequest& req, WebResponse& res) {

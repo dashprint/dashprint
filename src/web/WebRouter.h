@@ -16,12 +16,30 @@ public:
 	typedef std::function<bool()> wshandler_t;
 	typedef boost::beast::http::verb method_t;
 
-	void get(const char* regexp, handler_t handler) { handle(method_t::get, regexp, handler); }
-	void post(const char* regexp, handler_t handler) { handle(method_t::post, regexp, handler); }
-	void put(const char* regexp, handler_t handler) { handle(method_t::put, regexp, handler); }
-	void delete_(const char* regexp, handler_t handler) { handle(method_t::delete_, regexp, handler); }
+	template <typename Handler, typename... Args> void handle(method_t method, const char* regexp, Handler handler, Args... args)
+	{
+		handle(method, regexp, (handler_t) [=](WebRequest& req,WebResponse& res) { handler(req, res, args...); });
+	}
+	template<> void handle(method_t method, const char* regexp, handler_t handler);
+
+	template <typename Handler, typename... Args> void get(const char* regexp, Handler handler, Args... args)
+	{
+		handle(method_t::get, regexp, handler, args...);
+	}
+	template <typename Handler, typename... Args> void post(const char* regexp, Handler handler, Args... args)
+	{
+		handle(method_t::post, regexp, handler, args...);
+	}
+	template <typename Handler, typename... Args> void put(const char* regexp, Handler handler, Args... args)
+	{
+		handle(method_t::put, regexp, handler, args...);
+	}
+	template <typename Handler, typename... Args> void delete_(const char* regexp, Handler handler, Args... args)
+	{
+		handle(method_t::delete_, regexp, handler, args...);
+	}
+
 	void ws(const char* regexp, wshandler_t handler);
-	void handle(method_t method, const char* regexp, handler_t handler);
 	std::shared_ptr<WebRouter> router(const char* route);
 
 	bool findHandler(const char* url, method_t method, handler_t& handler, boost::smatch& m);

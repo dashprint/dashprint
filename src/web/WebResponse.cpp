@@ -38,6 +38,7 @@ void WebResponse::send(http_status status)
 	m_session->send(std::move(res));
 }
 
+/*
 void WebResponse::send(const std::string& text, std::string_view contentType, http_status status)
 {
 	boost::beast::http::response<boost::beast::http::string_body> res{status, m_session->m_request.version()};
@@ -54,6 +55,7 @@ void WebResponse::send(const std::string& text, std::string_view contentType, ht
 	
 	m_session->send(std::move(res));
 }
+*/
 
 void WebResponse::sendFile(const char* path, http_status status)
 {
