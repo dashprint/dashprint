@@ -43,5 +43,14 @@ protected:
 	friend class WebSession;
 };
 
+#define DECLARE_EXCEPTION_TYPE(name) class name : public std::runtime_error { using std::runtime_error::runtime_error; }
+
+namespace WebErrors
+{
+	DECLARE_EXCEPTION_TYPE(not_found);
+	DECLARE_EXCEPTION_TYPE(bad_request);
+	DECLARE_EXCEPTION_TYPE(not_acceptable);
+}
+
 #endif /* WEBSERVER_H */
 

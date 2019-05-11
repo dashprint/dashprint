@@ -12,6 +12,7 @@
 #include "PrinterManager.h"
 #include "FileManager.h"
 #include "web/WebRequest.h"
+#include "web/WebResponse.h"
 #include "binfile/api.h"
 
 static void runApp();
@@ -57,14 +58,16 @@ void runApp()
 		{
 			// Provide compressed file
 			auto fileData = binfile::CompressedAsset(req.path().c_str());
-			if (!fileData.has_content())
+			if (!fileData.has_value())
 				throw WebErrors::not_found("File not found");
+
+			res.set(boost::beast::http::field::content_encoding, "gzip");
 		}
 		else
 		{
 			// Provide uncompressed file
 			auto fileData = binfile::Asset(req.path().c_str());
-			if (!fileData.has_content())
+			if (!fileData.has_value())
 				throw WebErrors::not_found("File not found");
 		}
 	});

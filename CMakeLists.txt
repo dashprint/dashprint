@@ -24,6 +24,8 @@ set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.66 REQUIRED COMPONENTS system regex filesystem iostreams log coroutine)
 include_directories(${Boost_INCLUDE_DIRS})
 
+add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING -DBOOST_BEAST_USE_STD_STRING_VIEW)
+
 find_package(ZLIB REQUIRED)
 include_directories(${ZLIB_INCLUDE_DIRS})
 
@@ -38,11 +40,6 @@ add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/webdata.cpp"
 
 # Detect 'mmal_core mmal_util mmal_vc_client vcos bcm_host' for RPi hi-perf camera
 
-# Boost is typically WAY too old on Raspbian, so we carry our own version
-# which is used as a header-only library.
-#find_package(Boost 1.55.0 REQUIRED system)
-
-# add_definitions(-DBOOST_ALL_NO_LIB -DBOOST_ERROR_CODE_HEADER_ONLY -DBOOST_CHRONO_HEADER_ONLY -DBOOST_SYSTEM_NO_DEPRECATED -DBOOST_BEAST_USE_POSIX_FILE=1 -DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 

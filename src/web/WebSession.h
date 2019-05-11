@@ -68,14 +68,5 @@ extern template void WebSession::send(boost::beast::http::response<boost::beast:
 extern template void WebSession::send(boost::beast::http::response<boost::beast::http::string_body>&& response);
 extern template void WebSession::send(boost::beast::http::response<boost::beast::http::file_body>&& response);
 
-#define DECLARE_EXCEPTION_TYPE(name) class name : public std::runtime_error { using std::runtime_error::runtime_error; }
-
-namespace WebErrors
-{
-	DECLARE_EXCEPTION_TYPE(not_found);
-	DECLARE_EXCEPTION_TYPE(bad_request);
-	DECLARE_EXCEPTION_TYPE(not_acceptable);
-}
-
 #endif /* WEBSESSION_H */
 

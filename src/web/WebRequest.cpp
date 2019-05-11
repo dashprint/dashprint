@@ -1,5 +1,6 @@
 #include "WebRequest.h"
 #include "WebSession.h"
+#include "WebServer.h"
 #include "MultipartFormData.h"
 
 nlohmann::json WebRequest::jsonRequest() const

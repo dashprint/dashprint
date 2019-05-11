@@ -1,4 +1,5 @@
 #include "WebResponse.h"
+#include "WebServer.h"
 
 WebResponse::WebResponse(std::shared_ptr<WebSession> session)
 : m_session(session)
@@ -27,6 +28,9 @@ void WebResponse::send(http_status status)
 {
 	boost::beast::http::response<boost::beast::http::empty_body> res{ status, m_session->m_request.version() };
 	res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+
+	for (const auto& [k, v] : m_headers)
+		res.set(k, v);
         
 	res.content_length(0);
 	res.keep_alive(m_session->m_request.keep_alive());
@@ -40,6 +44,9 @@ void WebResponse::send(const std::string& text, const char* contentType, http_st
 	
 	res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
 	res.set(boost::beast::http::field::content_type, contentType);
+
+	for (const auto& [k, v] : m_headers)
+		res.set(k, v);
 	
 	res.keep_alive(m_session->m_request.keep_alive());
 	res.body() = text;
@@ -64,6 +71,10 @@ void WebResponse::sendFile(const char* path, http_status status)
 				std::make_tuple(std::move(body)),
 				std::make_tuple(boost::beast::http::status::ok, m_session->m_request.version())};
 	res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+
+	for (const auto& [k, v] : m_headers)
+		res.set(k, v);
+
 	res.content_length(size);
 	res.keep_alive(m_session->m_request.keep_alive());
 
@@ -73,4 +84,26 @@ void WebResponse::sendFile(const char* path, http_status status)
 void WebResponse::send(const nlohmann::json& json, http_status status)
 {
 	send(json.dump(), "application/json", status);
+}
+
+void WebResponse::send(std::string_view data, const char* contentType, http_status status)
+{
+	boost::beast::http::response<boost::beast::http::span_body<char>> res{status, m_session->m_request.version()};
+
+	res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+	res.set(boost::beast::http::field::content_type, contentType);
+
+	for (const auto& [k, v] : m_headers)
+		res.set(k, v);
+	
+	res.keep_alive(m_session->m_request.keep_alive());
+	res.body() = data;
+	res.prepare_payload();
+	
+	m_session->send(std::move(res));
+}
+
+void WebResponse::set(boost::beast::http::field hdr, std::string_view value)
+{
+	m_headers.insert({hdr, value});
 }
