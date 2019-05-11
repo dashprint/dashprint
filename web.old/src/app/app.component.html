@@ -57,9 +57,37 @@
         <button (click)="editPrinter(selectedPrinter)" class="btn btn-outline">Edit</button>
       </div>
 
-      <div *ngIf="temperatures" class="printer-temperatures card">
+      <div *ngIf="selectedPrinter" class="printer-temperatures card">
         <div class="card-header">Temperatures</div>
-        <canvas width="400" height="250" id="temperatures-graph" #temperaturesGraph></canvas>
+        <div>
+          <canvas width="450" height="300" id="temperatures-graph" #temperaturesGraph></canvas>
+          
+            <div class="clr-form-control">
+              <label for="bed-target" class="clr-control-label">Bed Target Temp</label>
+              <div class="clr-control-container clr-error">
+                <div class="clr-input-wrapper">
+                  <input type="text" id="bed-target" placeholder="°C" type="number" class="clr-input"
+                    [value]='temperatures.B.target'
+                    (input)='newTargetB = $event.target.value'
+                    (keydown.enter)='setTargetTemperatures()'/>
+                </div>
+              </div>
+            </div>
+
+            <div class="clr-form-control">
+              <label for="tool-target" class="clr-control-label">Tool Target Temp</label>
+              <div class="clr-control-container clr-error">
+                <div class="clr-input-wrapper">
+                  <input type="text" id="tool-target" placeholder="°C" type="number" class="clr-input"
+                    [value]='temperatures.T.target'
+                    (input)='newTargetT = $event.target.value'
+                    (keydown.enter)='setTargetTemperatures()'>
+                </div>
+              </div>
+            </div>
+          
+            <button class="btn btn-primary" (click)="setTargetTemperatures()">Set</button>
+        </div>
       </div>
 
       </div>

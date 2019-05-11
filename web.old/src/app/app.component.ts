@@ -26,13 +26,23 @@ export class AppComponent implements OnInit {
   dragOver: number = 0;
   runningEnableDisable: boolean = false;
 
+  newTargetT;
+  newTargetB;
+
   temperaturesGraph: ElementRef;
   temperaturesGraphRenderer: TemperatureGraph;
   @ViewChild("temperaturesGraph") set content(content: ElementRef) {
     this.temperaturesGraph = content;
 
     if (this.temperaturesGraph) {
-      this.temperaturesGraphRenderer = new TemperatureGraph(this.temperaturesGraph.nativeElement);
+      this.temperaturesGraphRenderer = new TemperatureGraph(this.temperaturesGraph.nativeElement, (name, value) => {
+        let changes = {};
+        changes[name] = value;
+
+        this.printService.setPrinterTargetTemperatures(this.selectedPrinter, changes).subscribe(result => {
+          console.log("Target temp change result: " + result);
+        });
+      });
       this.updateTemperaturesGraph();
     }
   }
@@ -85,7 +95,7 @@ export class AppComponent implements OnInit {
     this.temperatureHistory.push({ when: now, values: temps });
 
     // Kill old data
-    while (this.temperatureHistory.length > 0 && (now.getUTCMilliseconds() - new Date(this.temperatureHistory[0].when).getUTCMilliseconds()) > MAX_TEMPERATURE_HISTORY)
+    while (this.temperatureHistory.length > 0 && (now.getUTCMilliseconds() - this.temperatureHistory[0].when.getUTCMilliseconds()) > MAX_TEMPERATURE_HISTORY)
       this.temperatureHistory.shift();
   }
 
@@ -117,6 +127,8 @@ export class AppComponent implements OnInit {
 
       if (temps && temps.length > 0)
         this.temperatures = temps[temps.length-1].values;
+      else
+        this.temperatures = {};
       this.updateTemperaturesGraph();
 
       this.temperaturesSubscription = this.websocketService.subscribeToPrinterTemperatures(this.selectedPrinter, this.temperatures)
@@ -132,8 +144,18 @@ export class AppComponent implements OnInit {
       return;
 
     this.temperaturesGraphRenderer.temperatureHistory = this.temperatureHistory;
-    this.temperaturesGraphRenderer.temperatures = this.temperatures;
+    this.temperaturesGraphRenderer.temperatures = JSON.parse(JSON.stringify(this.temperatures));
     this.temperaturesGraphRenderer.render();
+  }
+
+  setTargetTemperatures() {
+    let changes = {
+      'B': parseInt(this.newTargetB),
+      'T': parseInt(this.newTargetT)
+    }
+    this.printService.setPrinterTargetTemperatures(this.selectedPrinter, changes).subscribe(result => {
+      console.log("Target temp change result: " + result);
+    });
   }
 
   onFileDrop(event: DragEvent) {

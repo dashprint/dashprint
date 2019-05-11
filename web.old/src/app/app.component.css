@@ -23,10 +23,18 @@
 }
 
 .printer-temperatures {
-    width: 430px;
-    height: 350px;
+    width: 480px;
 }
 
 #temperatures-graph {
-    padding: 1ex;
+    margin: 1ex;
+}
+
+.printer-temperatures .clr-form-control {
+    display: inline-block;
+    padding: 2ex;
+}
+
+.printer-temperatures .clr-input {
+    width: 5rem;
 }

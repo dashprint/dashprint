@@ -4,7 +4,7 @@ import { Observable } from 'rxjs/Observable';
 import { of } from 'rxjs/observable/of';
 import 'rxjs/add/operator/map';
 import {HttpClient, HttpErrorResponse, HttpHeaders} from '@angular/common/http';
-import {catchError} from "rxjs/operators";
+import {catchError, map} from "rxjs/operators";
 
 @Injectable()
 export class PrintService {
@@ -43,7 +43,7 @@ export class PrintService {
       return Observable.create((observer) => {
           this.http.post('/api/v1/printers', {
               name: printer.name,
-              default_printer: printer.defaultPrinter,
+              'default': printer.defaultPrinter,
               device_path: printer.devicePath,
               baud_rate: printer.baudRate,
               stopped: printer.stopped,
@@ -67,7 +67,19 @@ export class PrintService {
   }
 
   getPrinterTemperatures(printer: Printer) : Observable<TemperaturePoint[]> {
-      return this.http.get<TemperaturePoint[]>('/api/v1/printers/'+printer.id+'/temperatures');
+      return this.http.get<TemperaturePoint[]>('/api/v1/printers/'+printer.id+'/temperatures')
+      .map((value: TemperaturePoint[], index: number) : TemperaturePoint[] => {
+        for (let i = 0; i < value.length; i++) {
+            if (!(value[i].when instanceof Date))
+                value[i].when = new Date(value[i].when);
+        }
+        return value;
+      });
+  }
+
+  setPrinterTargetTemperatures(printer: Printer, changes) : Observable<string | object> {
+      return this.http.put('/api/v1/printers/' + printer.id + '/temperatures', changes)
+      .pipe(map(result => { return {} }), catchError(this.handleError));
   }
 
     private handleError(error) {
@@ -82,7 +94,7 @@ export class PrintService {
                 `body was: ${error.error}`);
         }
         // return an observable with a user-facing error message
-        return of("Error: " + error);
+        return of("Error: " + error.error);
     };
 
 }

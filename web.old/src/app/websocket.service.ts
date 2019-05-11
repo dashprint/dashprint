@@ -51,7 +51,8 @@ export class WebsocketService {
                           let tempName = key.substr(0, dot);
                           let tempParam = key.substr(dot+1);
 
-                          // TODO: prevent undefined error
+                          if (!temps[tempName])
+                            temps[tempName] = { current: 0, target: 0 };
                           temps[tempName][tempParam] = change[key];
                       }
                   }
