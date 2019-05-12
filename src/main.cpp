@@ -16,6 +16,7 @@
 #include "binfile/api.h"
 #include "api/RestApi.h"
 #include "api/OctoprintRestApi.h"
+#include "api/WebSockets.h"
 
 static void runApp();
 static void sanityCheck();
@@ -57,6 +58,7 @@ void runApp()
 
 	routeRest(webServer.router("/api/v1/"), fileManager, printerManager);
 	routeOctoprintRest(webServer.router("/api"), fileManager, printerManager);
+	routeWebSockets(webServer.router("/websocket"), fileManager, printerManager);
 	
 	// Fallback for static resources
 	webServer.get(".*", [](WebRequest& req, WebResponse& res) {

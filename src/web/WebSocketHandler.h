@@ -15,10 +15,11 @@ protected:
 
 	void accept(const boost::beast::http::request<boost::beast::http::string_body>& wsreq, boost::asio::ip::tcp::socket&& socket);
 public:
-	typedef std::function<void(std::string)> handler_t;
+	typedef std::function<void(const std::string&)> handler_t;
 	void message(handler_t handler) { m_handler = handler; }
 	void send(const std::string_view sv);
 	void close();
+	boost::asio::strand<boost::asio::executor>* strand() { return m_strand.get(); }
 private:
 	void accepted();
 	void doRead();

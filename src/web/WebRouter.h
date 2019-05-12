@@ -53,7 +53,12 @@ private:
 	};
 	std::list<url_mapping> m_mappings;
 
-	std::map<std::string, std::shared_ptr<WebRouter>> m_subroutes;
+	struct subroute
+	{
+		std::string prefix;
+		std::shared_ptr<WebRouter> router;
+	};
+	std::list<subroute> m_subroutes;
 };
 
 #endif

@@ -56,9 +56,9 @@ set(dashprint_sources
     src/web/WebRouter.cpp
     src/web/MultipartFormData.cpp
     src/web/WebSocketHandler.cpp
-    #src/WebsocketSession.cpp
     src/api/RestApi.cpp
     src/api/OctoprintRestApi.cpp
+    src/api/WebSockets.cpp
     src/Printer.cpp
     src/PrinterManager.cpp
     src/util.cpp
@@ -72,7 +72,7 @@ if (WITH_UDEV)
     set(dashprint_sources ${dashprint_sources} src/UdevPrinterDiscovery.cpp)
 endif (WITH_UDEV)
 
-set(LINK_LIBRARIES ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+set(LINK_LIBRARIES ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} Boost::iostreams Boost::filesystem Boost::log Boost::regex Boost::coroutine)
 if(UNIX AND NOT APPLE)
     set(LINK_LIBRARIES ${LINK_LIBRARIES} rt)
 endif()
@@ -80,10 +80,8 @@ endif()
 configure_file("${CMAKE_SOURCE_DIR}/dashprint_config.h.in" "${CMAKE_BINARY_DIR}/dashprint_config.h")
 include_directories("${CMAKE_BINARY_DIR}")
 
-#add_library(boost OBJECT ${boost_sources})
-
-add_executable(dashprint ${dashprint_sources}) # $<TARGET_OBJECTS:boost>)
-target_link_libraries(dashprint ${LINK_LIBRARIES} Boost::iostreams Boost::filesystem Boost::log Boost::regex Boost::coroutine ${ZLIB_LIBRARIES})
+add_executable(dashprint ${dashprint_sources})
+target_link_libraries(dashprint ${LINK_LIBRARIES})
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/web/dist/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/dashprint/web")
 install(TARGETS dashprint DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
@@ -93,14 +91,14 @@ if (WITH_TESTS)
     enable_testing()
 
     include_directories(${CMAKE_SOURCE_DIR}/src)
-    add_executable(PrinterTest test/PrinterTest.cpp src/Printer.cpp src/PrintJob.cpp $<TARGET_OBJECTS:boost>)
+    add_executable(PrinterTest test/PrinterTest.cpp src/Printer.cpp src/PrintJob.cpp)
     target_link_libraries(PrinterTest ${LINK_LIBRARIES})
 
     add_test(PrinterTest PrinterTest)
 
     ##############
 
-    add_executable(MultipartTest test/MultipartTest.cpp src/MultipartFormData.cpp $<TARGET_OBJECTS:boost>)
+    add_executable(MultipartTest test/MultipartTest.cpp src/MultipartFormData.cpp)
     target_link_libraries(MultipartTest ${LINK_LIBRARIES})
 
     add_test(MultipartTest MultipartTest)

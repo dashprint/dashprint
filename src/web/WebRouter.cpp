@@ -16,12 +16,9 @@ std::shared_ptr<WebRouter> WebRouter::router(const char* route)
 {
 	if (std::strlen(route) == 0 || std::strcmp(route, "/") == 0)
 		throw std::logic_error("Invalid subroute");
-
-	if (auto it = m_subroutes.find(route); it != m_subroutes.end())
-		return it->second;
 	
 	std::shared_ptr<WebRouter> sub = std::make_shared<WebRouter>();
-	m_subroutes.insert({ route, sub });
+	m_subroutes.emplace_back(subroute { route, sub });
 	return sub;
 }
 
@@ -40,10 +37,10 @@ void WebRouter::ws(const char* regexp, wshandler_t handler)
 
 bool WebRouter::findHandler(const char* url, method_t method, handler_t& handler, boost::smatch& m)
 {
-	for (auto& [k, v] : m_subroutes)
+	for (const subroute& sr : m_subroutes)
 	{
-		if (std::strncmp(url, k.c_str(), k.length()) == 0)
-			return v->findHandler(url + k.length(), method, handler, m);
+		if (std::strncmp(url, sr.prefix.c_str(), sr.prefix.length()) == 0)
+			return sr.router->findHandler(url + sr.prefix.length(), method, handler, m);
 	}
 
 	auto itHandler = std::find_if(m_mappings.begin(), m_mappings.end(),
