@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 3.1)
 option(WITH_UDEV "Enable udev-based device detection" ON)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 
 find_package(Threads)
 
@@ -24,6 +23,10 @@ find_package(Boost 1.69 REQUIRED COMPONENTS system regex filesystem iostreams lo
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING -DBOOST_BEAST_USE_STD_STRING_VIEW)
+
+if (NOT Boost_USE_STATIC_LIBS)
+    add_definitions(-DBOOST_ALL_DYN_LINK)
+endif (NOT Boost_USE_STATIC_LIBS)
 
 find_package(ZLIB REQUIRED)
 include_directories(${ZLIB_INCLUDE_DIRS})
