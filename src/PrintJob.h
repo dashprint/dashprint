@@ -31,6 +31,7 @@ public:
 	const char* stateString() const;
 	std::string errorString() const;
 	void progress(size_t& pos, size_t& total) const;
+	const std::string& name() const { return m_jobName; }
 
 	boost::signals2::signal<void(State)>& stateChangeSignal() { return m_stateChangeSignal; }
 protected:
@@ -51,6 +52,8 @@ private:
 
 	boost::signals2::signal<void(State)> m_stateChangeSignal;
 	size_t m_position = 0, m_size;
+
+	const std::string m_jobName;
 
 	friend class Printer;
 };

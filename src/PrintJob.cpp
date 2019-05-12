@@ -7,9 +7,10 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/filesystem.hpp>
 
 PrintJob::PrintJob(std::shared_ptr<Printer> printer, const char* file)
-: m_printer(printer), m_printerUniqueName(printer->uniqueName())
+: m_printer(printer), m_printerUniqueName(printer->uniqueName()), m_jobName(boost::filesystem::path(file).stem().generic_string())
 {
 	m_file.open(file);
 
@@ -32,7 +33,7 @@ void PrintJob::start()
 void PrintJob::stop()
 {
 	setState(State::Stopped);
-	// TODO: Anything?
+	// TODO: Move extruder away?
 }
 
 void PrintJob::pause()

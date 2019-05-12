@@ -279,6 +279,27 @@ namespace
 		std::shared_ptr<Printer> printer = printerManager->printer(printerName.c_str());
 
 		// TODO
+		if (!printer)
+			throw WebErrors::not_found("Printer not found");
+
+		std::shared_ptr<PrintJob> printJob = printer->printJob();
+		if (!printJob)
+			throw WebErrors::not_found("Print job not found");
+
+		nlohmann::json result = nlohmann::json::object();
+		result["state"] = printJob->stateString();
+		result["error"] = printJob->errorString();
+		result["name"] = printJob->name();
+
+		size_t pos, total;
+		printJob->progress(pos, total);
+
+		result["progress"] = {
+			"done", pos,
+			"total", total
+		};
+
+		resp.send(result);
 	}
 
 	void restGetPrinterTemperatures(WebRequest& req, WebResponse& resp, PrinterManager* printerManager)
@@ -425,39 +446,4 @@ void routeRest(std::shared_ptr<WebRouter> router, FileManager& fileManager, Prin
 	router->post("files/([^/]+)", restUploadFile, &fileManager);
 	router->get("files/([^/]+)", restDownloadFile, &fileManager);
 	router->get("files", restListFiles, &fileManager);
-
-/*
-	using method = boost::beast::http::verb;
-	
-	m_restHandlers.assign({
-		// Our API
-		HandlerMapping{ std::regex("/v1/printers/discover"), method::post, &WebRESTHandler::restPrintersDiscover },
-		HandlerMapping{ std::regex("/v1/printers"), method::get, &WebRESTHandler::restPrinters },
-		HandlerMapping{ std::regex("/v1/printers"), method::post, &WebRESTHandler::restSetupNewPrinter },
-
-		HandlerMapping{ std::regex("/v1/printers/([^/]+)"), method::put, &WebRESTHandler::restSetupPrinter },
-		HandlerMapping{ std::regex("/v1/printers/([^/]+)"), method::get, &WebRESTHandler::restPrinter },
-		HandlerMapping{ std::regex("/v1/printers/([^/]+)"), method::delete_, &WebRESTHandler::restDeletePrinter },
-
-		HandlerMapping{ std::regex("/v1/printers/([^/]+)/job"), method::post, &WebRESTHandler::restSubmitJob },
-		HandlerMapping{ std::regex("/v1/printers/([^/]+)/job"), method::put, &WebRESTHandler::restModifyJob },
-		HandlerMapping{ std::regex("/v1/printers/([^/]+)/job"), method::get, &WebRESTHandler::restGetJob },
-
-		HandlerMapping{ std::regex("/v1/printers/([^/]+)/temperatures"), method::put, &WebRESTHandler::restSetPrinterTemperatures },
-		HandlerMapping{ std::regex("/v1/printers/([^/]+)/temperatures"), method::get, &WebRESTHandler::restGetPrinterTemperatures },
-
-		HandlerMapping{ std::regex("/v1/files/([^/]+)"), method::post, &WebRESTHandler::restUploadFile },
-		HandlerMapping{ std::regex("/v1/files/([^/]+)"), method::get, &WebRESTHandler::restDownloadFile },
-		HandlerMapping{ std::regex("/v1/files"), method::get, &WebRESTHandler::restListFiles },
-				
-		// OctoPrint emu API
-		// X-Api-Key
-		//
-		// Used by Slic3r:
-		// api/files/local, http form post with print (true/false), path and file
-		// api/version
-		HandlerMapping{ std::regex("/version"), method::get, &WebRESTHandler::octoprintGetVersion },
-		HandlerMapping{ std::regex("/files/local"), method::post, &WebRESTHandler::octoprintUploadGcode },
-	});
-	*/
 }
