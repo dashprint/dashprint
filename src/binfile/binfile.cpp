@@ -16,7 +16,7 @@ void iterateTree(fs::path sourceDir, std::vector<std::string>& files, std::strin
 
 int main(int argc, const char** argv)
 {
-	if (argc <= 0)
+	if (argc <= 1)
 	{
 		std::cerr << "Usage: " << argv[0] << " <input-dir> <output-file>\n";
 		return 1;
@@ -60,7 +60,8 @@ void writeFiles(fs::path sourceDir, const std::vector<std::string>& files, std::
 		fos.push(cstring_filter<char>());
 		fos.push(out);
 
-		std::ifstream sourceFile(sourceDir / file, std::ios_base::in | std::ios_base::binary);
+		std::string fpath = (sourceDir / file).generic_string();
+		std::ifstream sourceFile(fpath.c_str(), std::ios_base::in | std::ios_base::binary);
 		if (!sourceFile.is_open())
 		{
 			std::stringstream ss;

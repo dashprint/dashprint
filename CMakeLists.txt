@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.1)
 option(WITH_UDEV "Enable udev-based device detection" ON)
 
 set(CMAKE_CXX_STANDARD 17)
-enable_language(ASM)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 
 find_package(Threads)
 
@@ -20,7 +20,6 @@ if (WITH_UDEV)
     include_directories(${UDEV_INCLUDE_DIR})
 endif (WITH_UDEV)
 
-set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.69 REQUIRED COMPONENTS system regex filesystem iostreams log coroutine)
 include_directories(${Boost_INCLUDE_DIRS})
 
@@ -30,7 +29,7 @@ find_package(ZLIB REQUIRED)
 include_directories(${ZLIB_INCLUDE_DIRS})
 
 add_executable(binfile src/binfile/binfile.cpp)
-target_link_libraries(binfile Boost::iostreams Boost::filesystem ${ZLIB_LIBRARIES})
+target_link_libraries(binfile Boost::iostreams Boost::filesystem ${ZLIB_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/webdata.cpp"
     COMMAND "${CMAKE_CURRENT_BINARY_DIR}/binfile" "${CMAKE_SOURCE_DIR}/web/dist" "${CMAKE_BINARY_DIR}/webdata.cpp"
