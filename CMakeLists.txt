@@ -31,47 +31,6 @@ endif (NOT Boost_USE_STATIC_LIBS)
 find_package(ZLIB REQUIRED)
 include_directories(${ZLIB_INCLUDE_DIRS})
 
-add_executable(binfile src/binfile/binfile.cpp)
-target_link_libraries(binfile Boost::iostreams Boost::filesystem ${ZLIB_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-
-add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/webdata.cpp"
-    COMMAND "${CMAKE_CURRENT_BINARY_DIR}/binfile" "${CMAKE_SOURCE_DIR}/web/dist" "${CMAKE_BINARY_DIR}/webdata.cpp"
-    DEPENDS binfile
-    COMMENT "Compressing web resources..."
-)
-
-# Detect 'mmal_core mmal_util mmal_vc_client vcos bcm_host' for RPi hi-perf camera
-
-
-include_directories(${CMAKE_SOURCE_DIR}/src)
-
-set(dashprint_sources
-	src/main.cpp
-    src/PrinterDiscovery.cpp
-    src/StaticPrinterDiscovery.cpp
-    src/web/WebServer.cpp
-    src/web/WebSession.cpp
-    src/web/WebRequest.cpp
-    src/web/WebResponse.cpp
-    src/web/WebRouter.cpp
-    src/web/MultipartFormData.cpp
-    src/web/WebSocketHandler.cpp
-    src/api/RestApi.cpp
-    src/api/OctoprintRestApi.cpp
-    src/api/WebSockets.cpp
-    src/Printer.cpp
-    src/PrinterManager.cpp
-    src/util.cpp
-    src/PrintJob.cpp
-    src/PrintJob.h
-    src/FileManager.cpp
-    ${CMAKE_BINARY_DIR}/webdata.cpp
-)
-
-if (WITH_UDEV)
-    set(dashprint_sources ${dashprint_sources} src/UdevPrinterDiscovery.cpp)
-endif (WITH_UDEV)
-
 set(LINK_LIBRARIES ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} Boost::iostreams Boost::filesystem Boost::log Boost::regex Boost::coroutine)
 if(UNIX AND NOT APPLE)
     set(LINK_LIBRARIES ${LINK_LIBRARIES} rt)
@@ -79,13 +38,6 @@ endif()
 
 configure_file("${CMAKE_SOURCE_DIR}/dashprint_config.h.in" "${CMAKE_BINARY_DIR}/dashprint_config.h")
 include_directories("${CMAKE_BINARY_DIR}")
-
-add_executable(dashprint ${dashprint_sources})
-target_link_libraries(dashprint ${LINK_LIBRARIES})
-
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/web/dist/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/dashprint/web")
-install(TARGETS dashprint DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
-
 
 if (WITH_TESTS)
     enable_testing()
@@ -103,3 +55,6 @@ if (WITH_TESTS)
 
     add_test(MultipartTest MultipartTest)
 endif(WITH_TESTS)
+
+add_subdirectory(src)
+

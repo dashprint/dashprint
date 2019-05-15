@@ -332,6 +332,7 @@ void Printer::doConnect()
 				if (!reply.empty())
 				{
 					setState(State::Connected);
+					showStartupMessage();
 					getTemperature();
 				}
 			});
@@ -350,6 +351,11 @@ void Printer::doConnect()
 				doConnect();
 		});
 	}
+}
+
+void Printer::showStartupMessage()
+{
+	sendCommand("M117 DashPrint connected", nullptr);
 }
 
 void Printer::setNoResetOnReopen()
@@ -494,6 +500,7 @@ void Printer::readDone(const boost::system::error_code& ec)
 
 			// Reset line counter
 			m_nextLineNo = MAX_LINENO;
+			showStartupMessage();
 			doWrite();
 		}
 	}

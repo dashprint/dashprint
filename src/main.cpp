@@ -71,20 +71,19 @@ void runApp()
 		{
 			// Provide compressed file
 			auto fileData = binfile::compressedAsset(path);
-			if (!fileData.has_value())
-				throw WebErrors::not_found("File not found");
-
-			res.set(boost::beast::http::field::content_encoding, "gzip");
-			res.send(*fileData, WebResponse::mimeType(path));
+			if (fileData.has_value())
+			{
+				res.set(boost::beast::http::field::content_encoding, "gzip");
+				res.send(*fileData, WebResponse::mimeType(path));
+				return;
+			}
 		}
-		else
-		{
-			// Provide uncompressed file
-			auto fileData = binfile::asset(path);
-			if (!fileData.has_value())
-				throw WebErrors::not_found("File not found");
-			res.send(*fileData, WebResponse::mimeType(path));
-		}
+		
+		// Provide uncompressed file
+		auto fileData = binfile::asset(path);
+		if (!fileData.has_value())
+			throw WebErrors::not_found("File not found");
+		res.send(*fileData, WebResponse::mimeType(path));
 	});
 
 	webServer.start(g_config.get<int>("WebServer.port", 8970));

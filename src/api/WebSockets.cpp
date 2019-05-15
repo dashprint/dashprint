@@ -80,6 +80,11 @@ private:
 							std::bind(&WSSubscriptionServer::printerTemperatureEvent, this, route[1], std::placeholders::_1)));
 						return;
 					}
+					else if (route[2] == "job") {
+						// TODO: Subscribe to hasJob signal
+						// TODO: If it currently has a job, also subscribe to that PrintJob
+						return;
+					}
 				}
 			}
 

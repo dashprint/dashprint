@@ -135,6 +135,8 @@ private:
 
 	static unsigned int checksum(std::string cmd);
 	void setNoResetOnReopen();
+
+	void showStartupMessage();
 private:
 	std::string m_uniqueName; // As used in REST API URLs
 	std::string m_devicePath, m_name;

@@ -408,10 +408,12 @@ namespace
 		std::string name = req.pathParam(1);
 		
 		if (req.hasRequestFile())
-			fileManager->saveFile(name.c_str(), req.requestFile().c_str());
+			name = fileManager->saveFile(name.c_str(), req.requestFile().c_str());
 		else
-			fileManager->saveFile(name.c_str(), req.request().body().c_str(), req.request().body().length());
+			name = fileManager->saveFile(name.c_str(), req.request().body().c_str(), req.request().body().length());
 
+		std::string realUrl = req.baseUrl() + "/api/v1/files/" + name;
+		resp.set(WebResponse::http_header::location, realUrl);
 		resp.send(boost::beast::http::status::created);
 	}
 

@@ -61,13 +61,18 @@ std::vector<FileManager::FileInfo> FileManager::listFiles()
 		if (boost::filesystem::is_regular_file(p))
 		{
 			FileInfo fi;
-			fi.name = p.path().generic_string();
+			fi.name = p.path().filename().generic_string();
 			fi.length = boost::filesystem::file_size(p.path());
 			fi.modifiedTime = boost::filesystem::last_write_time(p.path());
 
 			rv.push_back(fi);
 		}
 	}
+
+	// Last modified first
+	std::sort(rv.begin(), rv.end(), [](const FileInfo& f1, const FileInfo& f2) {
+		return f1.modifiedTime > f2.modifiedTime;
+	});
 
 	return rv;
 }
