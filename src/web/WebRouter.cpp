@@ -35,17 +35,22 @@ void WebRouter::ws(const char* regexp, wshandler_t handler)
 	});
 }
 
-bool WebRouter::findHandler(const char* url, method_t method, handler_t& handler, boost::smatch& m)
+bool WebRouter::findHandler(std::string_view url, method_t method, handler_t& handler, boost::cmatch& m)
 {
 	for (const subroute& sr : m_subroutes)
 	{
-		if (std::strncmp(url, sr.prefix.c_str(), sr.prefix.length()) == 0)
-			return sr.router->findHandler(url + sr.prefix.length(), method, handler, m);
+		if (url.compare(0, sr.prefix.length(), sr.prefix) == 0)
+			return sr.router->findHandler(url.substr(sr.prefix.length()), method, handler, m);
 	}
 
 	auto itHandler = std::find_if(m_mappings.begin(), m_mappings.end(),
 		[&](const auto& mapping) {
-			return method == mapping.method && boost::regex_match(std::string(url), m, mapping.re);
+			if (method == mapping.method)
+			{
+				if (boost::regex_match(url.begin(), url.end(), m, mapping.re))
+					return true;
+			}
+			return false;
 		}
 	);
 

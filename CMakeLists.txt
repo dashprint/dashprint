@@ -19,14 +19,18 @@ if (WITH_UDEV)
     include_directories(${UDEV_INCLUDE_DIR})
 endif (WITH_UDEV)
 
+if (NOT Boost_USE_STATIC_LIBS)
+    add_definitions(-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB)
+    set(Boost_USE_STATIC_LIBS OFF)
+    set(Boost_USE_MULTITHREADED ON)
+    set(Boost_USE_STATIC_RUNTIME OFF)
+    set(BUILD_SHARED_LIBS TRUE)
+endif (NOT Boost_USE_STATIC_LIBS)
+
 find_package(Boost 1.69 REQUIRED COMPONENTS system regex filesystem iostreams log coroutine)
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING -DBOOST_BEAST_USE_STD_STRING_VIEW)
-
-if (NOT Boost_USE_STATIC_LIBS)
-    add_definitions(-DBOOST_ALL_DYN_LINK)
-endif (NOT Boost_USE_STATIC_LIBS)
 
 find_package(ZLIB REQUIRED)
 include_directories(${ZLIB_INCLUDE_DIRS})

@@ -258,10 +258,11 @@ bool WebSession::handleRequest()
 			throw WebErrors::bad_request("Illegal request URL");
 		}
 
-		boost::smatch matches;
+		boost::cmatch matches;
 		WebRouter::handler_t handler;
+		std::string target = std::string(m_request.target());
 
-		if (!m_server->findHandler(std::string(m_request.target()).c_str(), m_request.method(), handler, matches))
+		if (!m_server->findHandler(target.c_str(), m_request.method(), handler, matches))
 			throw WebErrors::not_found("Not found");
 
 		WebRequest req(m_request, m_bodyFile, matches, shared_from_this());

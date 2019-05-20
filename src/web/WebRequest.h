@@ -12,7 +12,7 @@ class WebRequest
 public:
 	WebRequest(const boost::beast::http::request<boost::beast::http::string_body>& request,
 		const std::string& requestFile,
-		const boost::smatch& matches,
+		const boost::cmatch& matches,
 		std::shared_ptr<WebSession> webSession)
 		: m_request(request), m_requestFile(requestFile), m_matches(matches), m_webSession(webSession) {}
 
@@ -42,7 +42,7 @@ protected:
 private:
 	const boost::beast::http::request<boost::beast::http::string_body>& m_request;
 	const std::string& m_requestFile;
-	const boost::smatch& m_matches;
+	const boost::cmatch& m_matches;
 	std::shared_ptr<WebSession> m_webSession;
 
 	// for websockets

@@ -5,6 +5,7 @@
 #include <boost/beast.hpp>
 #include <map>
 #include <memory>
+#include <string_view>
 #include "WebSocketHandler.h"
 
 class WebRequest;
@@ -43,7 +44,7 @@ public:
 	void ws(const char* regexp, wshandler_t handler);
 	std::shared_ptr<WebRouter> router(const char* route);
 
-	bool findHandler(const char* url, method_t method, handler_t& handler, boost::smatch& m);
+	bool findHandler(std::string_view url, method_t method, handler_t& handler, boost::cmatch& m);
 private:
 	struct url_mapping
 	{
