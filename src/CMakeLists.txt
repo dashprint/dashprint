@@ -1,11 +1,10 @@
 project(dashprint-src)
 
-add_executable(binfile binfile/binfile.cpp)
-target_link_libraries(binfile Boost::iostreams Boost::filesystem ${ZLIB_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+add_subdirectory(binfile)
 
 add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp"
-	COMMAND "${CMAKE_CURRENT_BINARY_DIR}/binfile" "${CMAKE_SOURCE_DIR}/web/dist" "${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp"
-    DEPENDS binfile
+	COMMAND "${BINFILE_EXE}" "${CMAKE_SOURCE_DIR}/web/dist" "${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp"
+    DEPENDS binfileexe
     COMMENT "Compressing web resources..."
 )
 
