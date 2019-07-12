@@ -1,4 +1,5 @@
 #include "OctoprintRestApi.h"
+#include "PrintJob.h"
 
 namespace
 {
@@ -50,7 +51,19 @@ namespace
 		if (!fileData || fileName.empty())
 			throw WebErrors::bad_request("missing fields");
 
-		fileName = fileManager->saveFile(fileName.c_str(), fileData, fileSize);
+		std::string filePath = fileManager->saveFile(fileName.c_str(), fileData, fileSize);
+
+		if (print)
+		{
+			std::string defaultPrinter = printerManager->defaultPrinter();
+			std::shared_ptr<Printer> printer = printerManager->printer(defaultPrinter);
+
+			if (printer && !printer->hasPrintJob())
+			{
+				auto printJob = std::make_shared<PrintJob>(printer, fileName, filePath.c_str());
+				printer->setPrintJob(printJob);
+			}
+		}
 
 		nlohmann::json result = nlohmann::json::object();
 		result["done"] = true;

@@ -403,6 +403,20 @@ namespace
 		resp.send(result, WebResponse::http_status::ok);
 	}
 
+	void restDeleteFile(WebRequest& req, WebResponse& resp, FileManager* fileManager)
+	{
+		std::string name = req.pathParam(1);
+		std::string path = fileManager->getFilePath(name.c_str());
+
+		if (!boost::filesystem::is_regular_file(path))
+			throw WebErrors::not_found(".gcode file not found");
+		
+		if (!boost::filesystem::remove(path))
+			throw WebErrors::not_found("Cannot delete file");
+		
+		resp.send(WebResponse::http_status::no_content);
+	}
+
 	void restUploadFile(WebRequest& req, WebResponse& resp, FileManager* fileManager)
 	{
 		std::string name = req.pathParam(1);
@@ -447,5 +461,6 @@ void routeRest(std::shared_ptr<WebRouter> router, FileManager& fileManager, Prin
 
 	router->post("files/([^/]+)", restUploadFile, &fileManager);
 	router->get("files/([^/]+)", restDownloadFile, &fileManager);
+	router->delete_("files/([^/]+)", restDeleteFile, &fileManager);
 	router->get("files", restListFiles, &fileManager);
 }
