@@ -1,3 +1,6 @@
 [submodule "web"]
 	path = web
 	url = ../dashprint-web.git
+[submodule "src/cpp-jwt"]
+	path = src/cpp-jwt
+	url = https://github.com/arun11299/cpp-jwt.git

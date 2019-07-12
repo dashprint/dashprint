@@ -12,6 +12,7 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp"
 
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_SOURCE_DIR}/src/cpp-jwt/include)
 
 set(dashprint_sources
 	main.cpp
