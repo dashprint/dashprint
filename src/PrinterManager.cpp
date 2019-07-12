@@ -88,7 +88,7 @@ std::shared_ptr<Printer> PrinterManager::newPrinter()
 	return std::make_shared<Printer>(m_io);
 }
 
-std::shared_ptr<Printer> PrinterManager::printer(const char* name)
+std::shared_ptr<Printer> PrinterManager::printer(std::string_view name)
 {
 	std::unique_lock<std::mutex> lock(m_printersMutex);
 	std::shared_ptr<Printer> rv;
@@ -123,7 +123,7 @@ void PrinterManager::addPrinter(std::shared_ptr<Printer> printer)
 	m_printerListChangeSignal();
 }
 
-bool PrinterManager::deletePrinter(const char* name)
+bool PrinterManager::deletePrinter(std::string_view name)
 {
 	std::unique_lock<std::mutex> lock(m_printersMutex);
 	auto it = m_printers.find(name);
@@ -160,7 +160,7 @@ std::set<std::string> PrinterManager::printerNames() const
 	return rv;
 }
 
-void PrinterManager::setDefaultPrinter(const char* name)
+void PrinterManager::setDefaultPrinter(std::string_view name)
 {
 	m_defaultPrinter = name;
 }

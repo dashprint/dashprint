@@ -706,7 +706,7 @@ bool Printer::hasPrintJob() const
 
 void Printer::setPrintJob(std::shared_ptr<PrintJob> job)
 {
-	std::lock_guard<std::mutex> lock(m_printJobMutex);
+	std::unique_lock<std::mutex> lock(m_printJobMutex);
 
 	if (job)
 	{
@@ -714,11 +714,15 @@ void Printer::setPrintJob(std::shared_ptr<PrintJob> job)
 			throw job_exists("Printer already has a print job");
 
 		m_printJob = job;
+
+		lock.unlock();
 		m_hasJobChangeSignal(true);
 	}
 	else if (m_printJob)
 	{
 		m_printJob.reset();
+
+		lock.unlock();
 		m_hasJobChangeSignal(false);
 	}
 }

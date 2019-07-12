@@ -4,6 +4,7 @@
 #include <string>
 #include <boost/log/trivial.hpp>
 #include <boost/algorithm/string.hpp>
+#include "PrintJob.h"
 
 class WSSubscriptionServer : public std::enable_shared_from_this<WSSubscriptionServer>
 {
@@ -81,8 +82,12 @@ private:
 						return;
 					}
 					else if (route[2] == "job") {
-						// TODO: Subscribe to hasJob signal
-						// TODO: If it currently has a job, also subscribe to that PrintJob
+						// Subscribe to hasJob signal
+						m_subscriptions.emplace(v, selfTrackingConnect(printer->hasPrintJobChangeSignal(),
+							std::bind(&WSSubscriptionServer::printerHasJobEvent, this, route[1], std::placeholders::_1)));
+						
+						// If it currently has a job, also subscribe to that PrintJob
+						doSubscribeJob(printer);
 						return;
 					}
 				}
@@ -96,9 +101,12 @@ private:
 	{
 		if (request.is_string())
 		{
-			auto it = m_subscriptions.find(request.get<std::string>());
-			it->second.disconnect();
-			m_subscriptions.erase(it);
+			std::multimap<std::string, boost::signals2::connection>::iterator it;
+			while ((it = m_subscriptions.find(request.get<std::string>())) != m_subscriptions.end())
+			{
+				it->second.disconnect();
+				m_subscriptions.erase(it);
+			}
 		}
 	}
 
@@ -135,11 +143,84 @@ private:
 		raiseEvent(event);
 	}
 
+	std::shared_ptr<PrintJob> doSubscribeJob(std::shared_ptr<Printer> printer)
+	{
+		std::shared_ptr<PrintJob> printJob = printer->printJob();
+		if (printJob)
+		{
+			std::string v = std::string("Printer.") + printer->uniqueName() + ".job";
+
+			m_subscriptions.emplace(v, selfTrackingConnect(printJob->stateChangeSignal(),
+				std::bind(&WSSubscriptionServer::jobStateChangeEvent, this, printer->uniqueName(), std::placeholders::_1, std::placeholders::_2)));
+
+			m_subscriptions.emplace(v, selfTrackingConnect(printJob->progressChangeSignal(),
+				std::bind(&WSSubscriptionServer::jobProgressEvent, this, printer->uniqueName(), std::placeholders::_1)));
+		}
+		return printJob;
+	}
+
+	void printerHasJobEvent(std::string printerId, bool hasJob)
+	{
+		nlohmann::json event;
+		nlohmann::json eventObject = {
+			{ "hasJob", hasJob }
+		};
+
+		if (hasJob)
+		{
+			// Subscribe to that job object automatically
+			// and fill in job information into "event".
+			std::shared_ptr<Printer> printer = m_printerManager.printer(printerId);
+			std::shared_ptr<PrintJob> printJob = doSubscribeJob(printer);
+
+			if (printJob)
+			{
+				// Fill in job information
+				eventObject["state"] = printJob->stateString();
+
+				size_t progress, total;
+				printJob->progress(progress, total);
+
+				eventObject["done"] = progress;
+				eventObject["total"] = total;
+				eventObject["name"] = printJob->name();
+			}
+		}
+
+		event["event"]["Printer." + printerId + ".job"] = eventObject;
+		raiseEvent(event);
+	}
+
+	void jobStateChangeEvent(std::string printer, PrintJob::State state, std::string errorString)
+	{
+		nlohmann::json event;
+		nlohmann::json eventObject = {
+			{ "state", PrintJob::stateString(state) }
+		};
+
+		if (state == PrintJob::State::Error)
+			eventObject["error"] = errorString;
+
+		event["event"]["Printer." + printer + ".job"] = eventObject;
+		raiseEvent(event);
+	}
+
+	void jobProgressEvent(std::string printer, size_t progress)
+	{
+		nlohmann::json event;
+
+		event["event"]["Printer." + printer + ".job"] = {
+			{ "done", progress }
+		};
+
+		raiseEvent(event);
+	}
+
 private:
 	WebSocketHandler& m_ws;
 	PrinterManager& m_printerManager;
 	FileManager& m_fileManager;
-	std::map<std::string, boost::signals2::connection> m_subscriptions;
+	std::multimap<std::string, boost::signals2::connection> m_subscriptions;
 };
 
 void routeWebSockets(std::shared_ptr<WebRouter> router, FileManager& fileManager, PrinterManager& printerManager)

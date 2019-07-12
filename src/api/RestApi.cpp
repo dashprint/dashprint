@@ -214,11 +214,13 @@ namespace
 			return;
 		}
 
-		std::string filePath = fileManager->getFilePath(jreq["file"].get<std::string>().c_str());
+		std::string fileName = jreq["file"].get<std::string>();
+		std::string filePath = fileManager->getFilePath(fileName);
+
 		if (!boost::filesystem::is_regular_file(filePath))
 			throw WebErrors::not_found(".gcode file not found");
 		
-		printJob = std::make_shared<PrintJob>(printer, filePath.c_str());
+		printJob = std::make_shared<PrintJob>(printer, fileName, filePath.c_str());
 		printer->setPrintJob(printJob);
 
 		// Unless state is Stopped, start the job
@@ -294,10 +296,8 @@ namespace
 		size_t pos, total;
 		printJob->progress(pos, total);
 
-		result["progress"] = {
-			"done", pos,
-			"total", total
-		};
+		result["done"] = pos;
+		result["total"] = total;
 
 		resp.send(result);
 	}

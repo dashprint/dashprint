@@ -13,11 +13,12 @@
 
 #ifndef PRINTERMANAGER_H
 #define PRINTERMANAGER_H
-#include <unordered_map>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <set>
 #include <string>
+#include <string_view>
 #include <boost/asio.hpp>
 #include <boost/signals2.hpp>
 #include "Printer.h"
@@ -31,12 +32,12 @@ public:
 	PrinterManager& operator=(const PrinterManager& that) = delete;
 
 	std::shared_ptr<Printer> newPrinter();
-	std::shared_ptr<Printer> printer(const char* name);
+	std::shared_ptr<Printer> printer(std::string_view name);
 	void addPrinter(std::shared_ptr<Printer> printer);
-	bool deletePrinter(const char* name);
+	bool deletePrinter(std::string_view name);
 	std::set<std::string> printerNames() const;
 
-	void setDefaultPrinter(const char* name);
+	void setDefaultPrinter(std::string_view name);
 	const char* defaultPrinter();
 
 	void saveSettings();
@@ -48,7 +49,7 @@ private:
 private:
 	boost::asio::io_service& m_io;
 	boost::property_tree::ptree& m_config;
-	std::unordered_map<std::string, std::shared_ptr<Printer>> m_printers;
+	std::map<std::string, std::shared_ptr<Printer>, std::less<>> m_printers;
 	mutable std::mutex m_printersMutex;
 	std::string m_defaultPrinter;
 

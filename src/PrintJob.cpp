@@ -9,10 +9,10 @@
 #include <boost/log/trivial.hpp>
 #include <boost/filesystem.hpp>
 
-PrintJob::PrintJob(std::shared_ptr<Printer> printer, const char* file)
-: m_printer(printer), m_printerUniqueName(printer->uniqueName()), m_jobName(boost::filesystem::path(file).stem().generic_string())
+PrintJob::PrintJob(std::shared_ptr<Printer> printer, std::string_view fileName, const char* filePath)
+: m_printer(printer), m_printerUniqueName(printer->uniqueName()), m_jobName(fileName)
 {
-	m_file.open(file);
+	m_file.open(filePath);
 
 	if (!m_file.is_open())
 		throw std::runtime_error("Cannot open GCODE file");
@@ -33,6 +33,17 @@ void PrintJob::start()
 void PrintJob::stop()
 {
 	setState(State::Stopped);
+
+	std::shared_ptr<Printer> printer = m_printer.lock();
+
+	if (printer)
+	{
+		// Disable steppers
+		printer->sendCommand("M18", nullptr);
+		// Fan off
+		printer->sendCommand("M107", nullptr);
+	}
+
 	// TODO: Move extruder away?
 }
 
@@ -71,6 +82,8 @@ std::string PrintJob::nextLine()
 	while (line.empty() && !m_file.eof() && !m_file.bad());
 
 	m_position = m_file.tellg();
+	if (m_file.eof())
+		m_position = m_size;
 	return line;
 }
 
@@ -120,6 +133,8 @@ void PrintJob::lineProcessed(const std::vector<std::string>& resp)
 				throw std::runtime_error("Invalid line number requested. Have you reset the printer?");
 		}
 
+		m_progressChangeSignal(m_position);
+
 		if (m_state == State::Running)
 			printLine();
 	}
@@ -132,7 +147,7 @@ void PrintJob::lineProcessed(const std::vector<std::string>& resp)
 void PrintJob::setState(State state)
 {
 	m_state = state;
-	m_stateChangeSignal(state);
+	m_stateChangeSignal(state, m_errorString);
 }
 
 std::string PrintJob::errorString() const
@@ -143,7 +158,12 @@ std::string PrintJob::errorString() const
 
 const char* PrintJob::stateString() const
 {
-	switch (m_state)
+	return stateString(m_state);
+}
+
+const char* PrintJob::stateString(State state)
+{
+	switch (state)
 	{
 		case State::Stopped:
 			return "Stopped";
@@ -159,6 +179,6 @@ const char* PrintJob::stateString() const
 
 void PrintJob::progress(size_t& pos, size_t& total) const
 {
-	pos = m_position;
+	pos = (m_state == State::Done) ? m_size : m_position;
 	total = m_size;
 }
