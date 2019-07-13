@@ -11,8 +11,11 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp"
 # Detect 'mmal_core mmal_util mmal_vc_client vcos bcm_host' for RPi hi-perf camera
 
 
-include_directories(${CMAKE_SOURCE_DIR}/src)
-include_directories(${CMAKE_SOURCE_DIR}/src/cpp-jwt/include)
+include_directories(
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/bcrypt
+    ${CMAKE_SOURCE_DIR}/src/cpp-jwt/include
+)
 
 set(dashprint_sources
 	main.cpp
@@ -25,15 +28,19 @@ set(dashprint_sources
     web/WebRouter.cpp
     web/MultipartFormData.cpp
     web/WebSocketHandler.cpp
-    api/RestApi.cpp
+    api/PrintApi.cpp
     api/OctoprintRestApi.cpp
     api/WebSockets.cpp
+    api/AuthApi.cpp
     Printer.cpp
     PrinterManager.cpp
     util.cpp
     PrintJob.cpp
     PrintJob.h
     FileManager.cpp
+    AuthManager.cpp
+    bcrypt/bcrypt.c
+    bcrypt/blowfish.c
 	${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp
 )
 

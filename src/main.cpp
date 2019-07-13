@@ -14,9 +14,11 @@
 #include "web/WebRequest.h"
 #include "web/WebResponse.h"
 #include "binfile/api.h"
-#include "api/RestApi.h"
+#include "api/PrintApi.h"
 #include "api/OctoprintRestApi.h"
 #include "api/WebSockets.h"
+#include "api/AuthApi.h"
+#include "AuthManager.h"
 
 static void runApp();
 static void sanityCheck();
@@ -55,8 +57,11 @@ void runApp()
 	FileManager fileManager(localStoragePath());
 	PrinterManager printerManager(io, g_config);
 	WebServer webServer(io);
+	AuthManager authManager(g_config.get_child("users"));
 
-	routeRest(webServer.router("/api/v1/"), fileManager, printerManager);
+	auto apiv1 = webServer.router("/api/v1/");
+	routeRest(apiv1, fileManager, printerManager);
+	routeAuth(apiv1);
 	routeOctoprintRest(webServer.router("/api"), fileManager, printerManager);
 	routeWebSockets(webServer.router("/websocket"), fileManager, printerManager);
 	

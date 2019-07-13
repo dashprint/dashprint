@@ -53,6 +53,9 @@ void loadConfig()
 	try
 	{
 		boost::property_tree::info_parser::read_info(configPath.string(), g_config);
+
+		if (!g_config.get_child_optional("users"))
+			g_config.put_child("users", boost::property_tree::ptree());
 	}
 	catch (const std::exception& e)
 	{
