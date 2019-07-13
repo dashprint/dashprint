@@ -12,9 +12,9 @@ public:
 
 	void createUser(const char* username, const char* password);
 	bool authenticate(const char* username, const char* password);
-	std::string authenticateOctoprintCompat(const char* key);
+	std::string authenticateOctoprintCompat(std::string_view key) const;
 	std::string generateToken(const char* username);
-	std::string checkToken(const char* token);
+	std::string checkToken(std::string_view) const;
 private:
 	static std::string generateSalt();
 	static std::string hashPassword(const char* password);
@@ -24,7 +24,7 @@ private:
 	void setupSharedSecret();
 private:
 	boost::property_tree::ptree& m_config;
-	std::mutex m_mutex;
+	mutable std::mutex m_mutex;
 	std::string m_sharedSecret;
 };
 

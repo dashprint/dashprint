@@ -12,6 +12,8 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/log/trivial.hpp>
+#include <iostream>
 
 AuthManager::AuthManager(boost::property_tree::ptree& config)
 : m_config(config)
@@ -23,20 +25,16 @@ AuthManager::AuthManager(boost::property_tree::ptree& config)
 			"Password: dashprint\n\n";
 
 		createUser("admin", "dashprint");
-
-		setupSharedSecret();
 	}
+
+	setupSharedSecret();
 }
 
 void AuthManager::setupSharedSecret()
 {
-	auto existing = m_config.get_child_optional("_system");
-	if (existing)
-	{
-		m_sharedSecret = existing->get<std::string>("secret");
-		if (!m_sharedSecret.empty())
-			return;
-	}
+	m_sharedSecret = m_config.get("_system.secret", "");
+	if (!m_sharedSecret.empty())
+		return;
 
 	auto sharedSecret = generateSharedSecret(60);
 	m_config.put("_system.secret", sharedSecret);
@@ -112,25 +110,34 @@ bool AuthManager::authenticate(const char* username, const char* password)
 
 std::string AuthManager::generateToken(const char* username)
 {
-	jwt::jwt_object obj{jwt::params::algorithm("hs256"), jwt::params::secret("secret"), jwt::params::payload({{"username", username}})};
+	jwt::jwt_object obj{jwt::params::algorithm("hs256"), jwt::params::secret(m_sharedSecret), jwt::params::payload({{"username", username}})};
 	obj.add_claim("exp", std::chrono::system_clock::now() + std::chrono::minutes{10});
 
 	std::error_code ec;
   	auto str = obj.signature(ec);
 
 	if (ec)
+	{
+		BOOST_LOG_TRIVIAL(error) << "Failed to generate a JWT: " << ec.message();
 		throw std::runtime_error("Cannot generate JWT");
+	}
+
+	std::cout << "Generated token: " << str << std::endl;
+	std::cout << "Validation result: " << checkToken(str.c_str()) << std::endl;
 
 	return str;
 }
 
-std::string AuthManager::checkToken(const char* token)
+std::string AuthManager::checkToken(std::string_view token) const
 {
 	std::error_code ec;
-	auto dec_obj = jwt::decode(token, jwt::params::algorithms({"hs256"}), ec, jwt::params::secret("secret"), jwt::params::verify(true));
+	auto dec_obj = jwt::decode(token, jwt::params::algorithms({"hs256"}), ec, jwt::params::secret(m_sharedSecret), jwt::params::verify(true));
 
 	if (ec)
+	{
+		BOOST_LOG_TRIVIAL(warning) << "Token " << token << " failed to validate: " << ec.message();
 		return std::string();
+	}
 
 	std::string username = dec_obj.payload().create_json_obj()["username"].get<std::string>();
 	return username;
@@ -150,7 +157,7 @@ std::string AuthManager::generateSharedSecret(size_t length)
 	return secret;
 }
 
-std::string AuthManager::authenticateOctoprintCompat(const char* key)
+std::string AuthManager::authenticateOctoprintCompat(std::string_view key) const
 {
 	std::unique_lock<std::mutex> lock(m_mutex);
 

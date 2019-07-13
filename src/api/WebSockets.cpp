@@ -5,6 +5,7 @@
 #include <boost/log/trivial.hpp>
 #include <boost/algorithm/string.hpp>
 #include "PrintJob.h"
+#include <iostream>
 
 class WSSubscriptionServer : public std::enable_shared_from_this<WSSubscriptionServer>
 {
@@ -223,9 +224,28 @@ private:
 	std::multimap<std::string, boost::signals2::connection> m_subscriptions;
 };
 
-void routeWebSockets(std::shared_ptr<WebRouter> router, FileManager& fileManager, PrinterManager& printerManager)
+void routeWebSockets(WebRouter* router, FileManager& fileManager, PrinterManager& printerManager, AuthManager& authManager)
 {
-	router->ws("", [&](WebSocketHandler& ws,WebRequest& req,WebResponse& resp) {
+	router->addFilter([=, &authManager](WebRequest& req,WebResponse& resp, WebRouter::handler_t next) {
+		std::string_view sv = req.request().target();
+		auto pos = sv.rfind('/');
+
+		std::string token = std::string(sv.substr(pos+1));
+
+		std::cout << "Checking WS token: " << token << std::endl;
+		std::string user = authManager.checkToken(token.c_str());
+
+		if (!user.empty())
+		{
+			req.privateData()["username"] = user;
+
+			next(req, resp);
+			return;
+		}
+
+		resp.send(boost::beast::http::status::unauthorized);
+	});
+	router->ws("(.*)", [&](WebSocketHandler& ws,WebRequest& req,WebResponse& resp) {
 		std::shared_ptr<WSSubscriptionServer> h = std::make_shared<WSSubscriptionServer>(ws, printerManager, fileManager);
 
 		ws.message([=](const std::string& msg) {

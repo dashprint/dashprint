@@ -5,6 +5,6 @@
 #include "PrinterManager.h"
 #include "AuthManager.h"
 
-void routeOctoprintRest(std::shared_ptr<WebRouter> router, FileManager& fileManager, PrinterManager& printerManager, AuthManager& authManager);
+void routeOctoprintRest(WebRouter* router, FileManager& fileManager, PrinterManager& printerManager, AuthManager& authManager);
 
 #endif

@@ -65,7 +65,7 @@ void runApp()
 	routeRest(apiv1, fileManager, printerManager);
 	routeAuth(apiv1, authManager);
 	routeOctoprintRest(webServer.router("/api/")->addFilter(checkOctoprintKey(&authManager)), fileManager, printerManager, authManager);
-	routeWebSockets(webServer.router("/websocket")->addFilter(checkToken(&authManager)), fileManager, printerManager);
+	routeWebSockets(webServer.router("/websocket"), fileManager, printerManager, authManager);
 	
 	// Fallback for static resources
 	webServer.get(".*", [](WebRequest& req, WebResponse& res) {

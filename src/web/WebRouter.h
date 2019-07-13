@@ -77,6 +77,7 @@ private:
 	};
 	std::list<subroute> m_subroutes;
 	std::list<filter_t> m_filters;
+	std::string m_prefix;
 };
 
 #endif

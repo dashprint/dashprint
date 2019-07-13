@@ -19,7 +19,8 @@ WebRouter* WebRouter::router(const char* route)
 	
 	std::shared_ptr<WebRouter> sub = std::make_shared<WebRouter>();
 	m_subroutes.emplace_back(subroute { route, sub });
-	return *sub;
+	sub->m_prefix = m_prefix + route;
+	return sub.get();
 }
 
 void WebRouter::ws(const char* regexp, wshandler_t handler)
@@ -37,11 +38,7 @@ void WebRouter::ws(const char* regexp, wshandler_t handler)
 
 bool WebRouter::findHandler(std::string_view url, method_t method, handler_t& handler, boost::cmatch& m)
 {
-	for (const subroute& sr : m_subroutes)
-	{
-		if (url.compare(0, sr.prefix.length(), sr.prefix) == 0)
-			return sr.router->findHandler(url.substr(sr.prefix.length()), method, handler, m);
-	}
+	url = url.substr(m_prefix.length());
 
 	auto itHandler = std::find_if(m_mappings.begin(), m_mappings.end(),
 		[&](const auto& mapping) {
@@ -84,6 +81,12 @@ void WebRouter::runHandlerNoFilters(WebRequest& req, WebResponse& res)
 {
 	handler_t handler;
 	std::string target = std::string(req.request().target());
+
+	for (const subroute& sr : m_subroutes)
+	{
+		if (target.compare(m_prefix.length(), m_prefix.length()+sr.prefix.length(), sr.prefix) == 0)
+			return sr.router->runHandler(req, res);
+	}
 
 	if (!findHandler(target.c_str(), req.request().method(), handler, req.matches()))
 		throw WebErrors::not_found("Not found");

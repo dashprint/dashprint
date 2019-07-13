@@ -3,4 +3,4 @@
 	url = ../dashprint-web.git
 [submodule "src/cpp-jwt"]
 	path = src/cpp-jwt
-	url = https://github.com/arun11299/cpp-jwt.git
+	url = ../cpp-jwt.git

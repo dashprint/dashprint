@@ -88,7 +88,7 @@ namespace
 
 }
 
-void routeOctoprintRest(std::shared_ptr<WebRouter> router, FileManager& fileManager, PrinterManager& printerManager, AuthManager& authManager)
+void routeOctoprintRest(WebRouter* router, FileManager& fileManager, PrinterManager& printerManager, AuthManager& authManager)
 {
 	router->get("version", octoprintGetVersion);
 	router->post("files/local", octoprintUploadGcode, &printerManager, &fileManager);
