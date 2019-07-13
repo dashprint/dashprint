@@ -37,6 +37,8 @@ public:
 
 	std::string pathParam(unsigned int sub) const { return m_matches.str(sub); }
 	std::string pathParam(const char* sub) const { return m_matches.str(sub); }
+
+	std::map<std::string, std::string>& privateData() { return m_privateData; }
 protected:
 	boost::asio::ip::tcp::socket&& socket();
 private:
@@ -44,6 +46,7 @@ private:
 	const std::string& m_requestFile;
 	const boost::cmatch& m_matches;
 	std::shared_ptr<WebSession> m_webSession;
+	std::map<std::string, std::string> m_privateData;
 
 	// for websockets
 	friend class WebRouter;

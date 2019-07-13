@@ -60,8 +60,9 @@ void runApp()
 	AuthManager authManager(g_config.get_child("users"));
 
 	auto apiv1 = webServer.router("/api/v1/");
+	
 	routeRest(apiv1, fileManager, printerManager);
-	routeAuth(apiv1);
+	routeAuth(apiv1, authManager);
 	routeOctoprintRest(webServer.router("/api"), fileManager, printerManager);
 	routeWebSockets(webServer.router("/websocket"), fileManager, printerManager);
 	

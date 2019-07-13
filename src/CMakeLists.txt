@@ -10,7 +10,6 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp"
 
 # Detect 'mmal_core mmal_util mmal_vc_client vcos bcm_host' for RPi hi-perf camera
 
-
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/bcrypt
@@ -50,7 +49,7 @@ endif (WITH_UDEV)
 
 
 add_executable(dashprint ${dashprint_sources})
-target_link_libraries(dashprint ${LINK_LIBRARIES})
+target_link_libraries(dashprint ${LINK_LIBRARIES} OpenSSL::SSL)
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/web/dist/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/dashprint/web")
 install(TARGETS dashprint DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")

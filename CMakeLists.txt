@@ -35,6 +35,8 @@ add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING -DBOOST_BEAST_USE_STD_
 find_package(ZLIB REQUIRED)
 include_directories(${ZLIB_INCLUDE_DIRS})
 
+find_package(OpenSSL REQUIRED)
+
 set(LINK_LIBRARIES ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} Boost::iostreams Boost::filesystem Boost::log Boost::regex Boost::coroutine)
 if(UNIX AND NOT APPLE)
     set(LINK_LIBRARIES ${LINK_LIBRARIES} rt)
