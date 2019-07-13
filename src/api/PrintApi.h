@@ -19,7 +19,7 @@
 #include "FileManager.h"
 #include "PrinterManager.h"
 
-void routeRest(std::shared_ptr<WebRouter> router, FileManager& fileManager, PrinterManager& printerManager);
+void routeRest(WebRouter* router, FileManager& fileManager, PrinterManager& printerManager);
 
 #endif /* RESTAPI_H */
 

@@ -12,9 +12,8 @@ class WebRequest
 public:
 	WebRequest(const boost::beast::http::request<boost::beast::http::string_body>& request,
 		const std::string& requestFile,
-		const boost::cmatch& matches,
 		std::shared_ptr<WebSession> webSession)
-		: m_request(request), m_requestFile(requestFile), m_matches(matches), m_webSession(webSession) {}
+		: m_request(request), m_requestFile(requestFile), m_webSession(webSession) {}
 
 	const boost::beast::http::request<boost::beast::http::string_body>& request() const { return m_request; }
 
@@ -41,10 +40,11 @@ public:
 	std::map<std::string, std::string>& privateData() { return m_privateData; }
 protected:
 	boost::asio::ip::tcp::socket&& socket();
+	boost::cmatch& matches() { return m_matches; }
 private:
 	const boost::beast::http::request<boost::beast::http::string_body>& m_request;
 	const std::string& m_requestFile;
-	const boost::cmatch& m_matches;
+	boost::cmatch m_matches;
 	std::shared_ptr<WebSession> m_webSession;
 	std::map<std::string, std::string> m_privateData;
 

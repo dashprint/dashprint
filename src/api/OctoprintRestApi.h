@@ -3,7 +3,8 @@
 #include "web/web.h"
 #include "FileManager.h"
 #include "PrinterManager.h"
+#include "AuthManager.h"
 
-void routeOctoprintRest(std::shared_ptr<WebRouter> router, FileManager& fileManager, PrinterManager& printerManager);
+void routeOctoprintRest(std::shared_ptr<WebRouter> router, FileManager& fileManager, PrinterManager& printerManager, AuthManager& authManager);
 
 #endif

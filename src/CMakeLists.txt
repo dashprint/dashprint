@@ -31,6 +31,7 @@ set(dashprint_sources
     api/OctoprintRestApi.cpp
     api/WebSockets.cpp
     api/AuthApi.cpp
+    api/AuthHelpers.cpp
     Printer.cpp
     PrinterManager.cpp
     util.cpp

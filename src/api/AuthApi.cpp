@@ -42,9 +42,9 @@ namespace
 	}
 }
 
-void routeAuth(std::shared_ptr<WebRouter> router, AuthManager& authManager)
+void routeAuth(WebRouter* router, AuthManager& authManager)
 {
 	router->post("auth/login", restAuthLogin, &authManager);
-	router->post("auth/refreshToken", checkToken(&authManager, restRefreshToken, &authManager));
+	router->post("auth/refreshToken", WebRouter::inlineFilter(checkToken(&authManager), restRefreshToken, &authManager));
 }
 

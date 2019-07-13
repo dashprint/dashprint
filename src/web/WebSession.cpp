@@ -258,16 +258,14 @@ bool WebSession::handleRequest()
 			throw WebErrors::bad_request("Illegal request URL");
 		}
 
-		boost::cmatch matches;
-		WebRouter::handler_t handler;
+		
 		std::string target = std::string(m_request.target());
-
-		if (!m_server->findHandler(target.c_str(), m_request.method(), handler, matches))
-			throw WebErrors::not_found("Not found");
-
-		WebRequest req(m_request, m_bodyFile, matches, shared_from_this());
+		WebRequest req(m_request, m_bodyFile, shared_from_this());
 		WebResponse res(shared_from_this());
-		handler(req, res);
+
+		/*WebRouter::handler_t handler;
+		if (!m_server->findHandler(target.c_str(), m_request.method(), handler, matches))*/
+		m_server->runHandler(req, res);
 	}
 	catch (const WebErrors::not_found& e)
 	{
@@ -298,15 +296,3 @@ bool WebSession::handleRequest()
 
 	return true;
 }
-
-/*
-void WebSession::handleRESTCall()
-{
-	// Remove "/api"
-	std::string resource = m_request.target().substr(4).to_string();
-	
-	// Route the request
-	if (!WebRESTHandler::instance().call(resource, m_request, m_bodyFile, this))
-		throw WebErrors::not_found(m_request.target().to_string());
-}
-*/

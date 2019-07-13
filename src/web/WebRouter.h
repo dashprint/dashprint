@@ -15,6 +15,7 @@ class WebRouter
 {
 public:
 	typedef std::function<void(WebRequest&,WebResponse&)> handler_t;
+	typedef std::function<void(WebRequest&,WebResponse&,handler_t)> filter_t;
 	typedef std::function<bool(WebSocketHandler&,WebRequest&,WebResponse&)> wshandler_t;
 	typedef boost::beast::http::verb method_t;
 
@@ -42,9 +43,24 @@ public:
 	}
 
 	void ws(const char* regexp, wshandler_t handler);
-	std::shared_ptr<WebRouter> router(const char* route);
+	WebRouter* router(const char* route);
 
 	bool findHandler(std::string_view url, method_t method, handler_t& handler, boost::cmatch& m);
+	void runHandler(WebRequest& req, WebResponse& res);
+
+	WebRouter* addFilter(filter_t filter) { m_filters.push_back(filter); return this; }
+
+	template <typename Callable, typename... Args>
+	static WebRouter::handler_t inlineFilter(filter_t filter, Callable c, Args... args)
+	{
+		return [=](WebRequest& req, WebResponse& resp) {
+			filter(req, resp, [=](WebRequest& req, WebResponse& resp) {
+				c(req, resp, args...);
+			});
+		};
+	}
+protected:
+	void runHandlerNoFilters(WebRequest& req, WebResponse& res);
 private:
 	struct url_mapping
 	{
@@ -60,6 +76,7 @@ private:
 		std::shared_ptr<WebRouter> router;
 	};
 	std::list<subroute> m_subroutes;
+	std::list<filter_t> m_filters;
 };
 
 #endif

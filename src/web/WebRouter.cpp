@@ -12,14 +12,14 @@ template<> void WebRouter::handle(method_t method, const char* regexp, handler_t
 	});
 }
 
-std::shared_ptr<WebRouter> WebRouter::router(const char* route)
+WebRouter* WebRouter::router(const char* route)
 {
 	if (std::strlen(route) == 0 || std::strcmp(route, "/") == 0)
 		throw std::logic_error("Invalid subroute");
 	
 	std::shared_ptr<WebRouter> sub = std::make_shared<WebRouter>();
 	m_subroutes.emplace_back(subroute { route, sub });
-	return sub;
+	return *sub;
 }
 
 void WebRouter::ws(const char* regexp, wshandler_t handler)
@@ -61,4 +61,32 @@ bool WebRouter::findHandler(std::string_view url, method_t method, handler_t& ha
 	}
 
 	return false;
+}
+
+void WebRouter::runHandler(WebRequest& req, WebResponse& res)
+{
+	auto it = m_filters.begin();
+	handler_t fnNext = [&](WebRequest& req, WebResponse& res) {
+		if (it == m_filters.end())
+			runHandlerNoFilters(req, res);
+		else
+		{
+			const filter_t& f = *it;
+			it++;
+			f(req, res, fnNext);
+		}
+	};
+
+	fnNext(req, res);
+}
+
+void WebRouter::runHandlerNoFilters(WebRequest& req, WebResponse& res)
+{
+	handler_t handler;
+	std::string target = std::string(req.request().target());
+
+	if (!findHandler(target.c_str(), req.request().method(), handler, req.matches()))
+		throw WebErrors::not_found("Not found");
+	
+	handler(req, res);
 }

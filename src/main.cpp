@@ -18,6 +18,7 @@
 #include "api/OctoprintRestApi.h"
 #include "api/WebSockets.h"
 #include "api/AuthApi.h"
+#include "api/AuthHelpers.h"
 #include "AuthManager.h"
 
 static void runApp();
@@ -63,8 +64,8 @@ void runApp()
 	
 	routeRest(apiv1, fileManager, printerManager);
 	routeAuth(apiv1, authManager);
-	routeOctoprintRest(webServer.router("/api"), fileManager, printerManager);
-	routeWebSockets(webServer.router("/websocket"), fileManager, printerManager);
+	routeOctoprintRest(webServer.router("/api/")->addFilter(checkOctoprintKey(&authManager)), fileManager, printerManager, authManager);
+	routeWebSockets(webServer.router("/websocket")->addFilter(checkToken(&authManager)), fileManager, printerManager);
 	
 	// Fallback for static resources
 	webServer.get(".*", [](WebRequest& req, WebResponse& res) {

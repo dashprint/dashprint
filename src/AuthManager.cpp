@@ -107,7 +107,7 @@ bool AuthManager::authenticate(const char* username, const char* password)
 	if (!user)
 		return false;
 	
-	return checkPassword(password, m_config.get<std::string>("password"));
+	return checkPassword(password, user->get<std::string>("password"));
 }
 
 std::string AuthManager::generateToken(const char* username)
