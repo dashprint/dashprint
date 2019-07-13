@@ -172,3 +172,14 @@ std::string AuthManager::authenticateOctoprintCompat(std::string_view key) const
 
 	return std::string();
 }
+
+std::string AuthManager::userOctoprintCompatKey(const char* username) const
+{
+	std::unique_lock<std::mutex> lock(m_mutex);
+
+	auto existing = m_config.get_child_optional(username);
+	if (!existing)
+		return std::string();
+	
+	return existing->get<std::string>("octoprint_compat_key");
+}

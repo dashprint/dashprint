@@ -8,6 +8,7 @@
 #include <memory>
 #include <boost/signals2.hpp>
 #include <mutex>
+#include <chrono>
 #include <string_view>
 #include "Printer.h"
 

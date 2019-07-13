@@ -42,6 +42,10 @@ void PrintJob::stop()
 		printer->sendCommand("M18", nullptr);
 		// Fan off
 		printer->sendCommand("M107", nullptr);
+		// Extruder heater off
+		printer->sendCommand("M104 S0", nullptr);
+		// Heatbed off
+		printer->sendCommand("M140 S0", nullptr);
 	}
 
 	// TODO: Move extruder away?

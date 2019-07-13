@@ -40,11 +40,30 @@ namespace
 
 		resp.send(rv);
 	}
+
+	void restGetUser(WebRequest& req, WebResponse& resp, AuthManager* authManager)
+	{
+		auto targetUser = req.pathParam(1);
+		if (targetUser != req.privateData()["username"])
+		{
+			resp.send(boost::beast::http::status::forbidden);
+			return;
+		}
+
+		std::string octoprintKey = authManager->userOctoprintCompatKey(req.privateData()["username"].c_str());
+
+		nlohmann::json rv = {
+			{ "octoprint_compat_key", octoprintKey }
+		};
+
+		resp.send(rv);
+	}
 }
 
 void routeAuth(WebRouter* router, AuthManager& authManager)
 {
 	router->post("auth/login", restAuthLogin, &authManager);
 	router->post("auth/refreshToken", WebRouter::inlineFilter(checkToken(&authManager), restRefreshToken, &authManager));
+	router->get("auth/user/(.+)", WebRouter::inlineFilter(checkToken(&authManager), restGetUser, &authManager));
 }
 

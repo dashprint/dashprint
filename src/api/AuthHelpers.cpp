@@ -6,15 +6,13 @@
 WebRouter::filter_t checkToken(AuthManager* authManager)
 {
 	return [=](WebRequest& req, WebResponse& resp, WebRouter::handler_t next) {
-		std::string_view hdr = req.header(boost::beast::http::field::www_authenticate);
+		std::string_view hdr = req.header(boost::beast::http::field::authorization);
 		if (!hdr.empty())
 		{
-			if (hdr.compare(0, 7, "Bearer "))
+			if (hdr.compare(0, 7, "Bearer ") == 0)
 				hdr = hdr.substr(7);
 			
 			std::string user = authManager->checkToken(hdr);
-			std::cout << "Token filter result for " << hdr << ": " << user << std::endl;
-
 			if (!user.empty())
 			{
 				req.privateData()["username"] = user;
@@ -23,6 +21,8 @@ WebRouter::filter_t checkToken(AuthManager* authManager)
 				return;
 			}
 		}
+		else
+			std::cout << "No Authorization header!\n";
 
 		resp.send(boost::beast::http::status::unauthorized);
 	};

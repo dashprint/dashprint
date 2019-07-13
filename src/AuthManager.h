@@ -15,6 +15,7 @@ public:
 	std::string authenticateOctoprintCompat(std::string_view key) const;
 	std::string generateToken(const char* username);
 	std::string checkToken(std::string_view) const;
+	std::string userOctoprintCompatKey(const char* username) const;
 private:
 	static std::string generateSalt();
 	static std::string hashPassword(const char* password);

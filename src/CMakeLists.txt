@@ -41,6 +41,8 @@ set(dashprint_sources
     AuthManager.cpp
     bcrypt/bcrypt.c
     bcrypt/blowfish.c
+    PluginManager.cpp
+    Plugin.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp
 )
 
@@ -50,10 +52,11 @@ endif (WITH_UDEV)
 
 
 add_executable(dashprint ${dashprint_sources})
-target_link_libraries(dashprint ${LINK_LIBRARIES} OpenSSL::SSL)
+target_link_libraries(dashprint ${LINK_LIBRARIES} OpenSSL::SSL quickjs -ldl)
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/web/dist/" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/dashprint/web")
 install(TARGETS dashprint DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
 
+add_subdirectory(quickjs)
 #add_subdirectory(wasm)
 
