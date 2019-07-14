@@ -111,7 +111,7 @@ bool AuthManager::authenticate(const char* username, const char* password)
 std::string AuthManager::generateToken(const char* username)
 {
 	jwt::jwt_object obj{jwt::params::algorithm("hs256"), jwt::params::secret(m_sharedSecret), jwt::params::payload({{"username", username}})};
-	obj.add_claim("exp", std::chrono::system_clock::now() + std::chrono::minutes{10});
+	obj.add_claim("exp", std::chrono::system_clock::now() + std::chrono::minutes{15});
 
 	std::error_code ec;
   	auto str = obj.signature(ec);

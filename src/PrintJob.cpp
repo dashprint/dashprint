@@ -24,14 +24,19 @@ PrintJob::PrintJob(std::shared_ptr<Printer> printer, std::string_view fileName, 
 void PrintJob::start()
 {
 	if (m_state != State::Paused)
+	{
+		m_timeElapsed = std::chrono::seconds::zero();
 		m_file.seekg(0, std::ios_base::beg);
+	}
 
 	setState(State::Running);
+	m_startTime = std::chrono::steady_clock::now();
 	printLine();
 }
 
 void PrintJob::stop()
 {
+	m_timeElapsed += std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - m_startTime);
 	setState(State::Stopped);
 
 	std::shared_ptr<Printer> printer = m_printer.lock();
@@ -53,6 +58,8 @@ void PrintJob::stop()
 
 void PrintJob::pause()
 {
+	m_timeElapsed += std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - m_startTime);
+
 	setState(State::Paused);
 	// TODO: pause sequence (move extruder away)
 }
@@ -112,6 +119,8 @@ void PrintJob::printLine()
 		else
 		{
 			// Print job done
+			m_timeElapsed += std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - m_startTime);
+
 			setState(State::Done);
 		}
 	}
@@ -150,8 +159,11 @@ void PrintJob::lineProcessed(const std::vector<std::string>& resp)
 
 void PrintJob::setState(State state)
 {
-	m_state = state;
-	m_stateChangeSignal(state, m_errorString);
+	if (state != m_state)
+	{
+		m_state = state;
+		m_stateChangeSignal(state, m_errorString);
+	}
 }
 
 std::string PrintJob::errorString() const
@@ -185,4 +197,12 @@ void PrintJob::progress(size_t& pos, size_t& total) const
 {
 	pos = (m_state == State::Done) ? m_size : m_position;
 	total = m_size;
+}
+
+std::chrono::seconds PrintJob::timeElapsed() const
+{
+	auto s = m_timeElapsed;
+	if (m_state == State::Running)
+		s += std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - m_startTime);
+	return s;
 }

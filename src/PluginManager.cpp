@@ -22,11 +22,14 @@ void PluginManager::loadPlugins()
 
 	pluginDir /= ".local/share/dashprint/plugins";
 
-	for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(pluginDir), {}))
+	if (boost::filesystem::is_directory(pluginDir))
 	{
-		const auto& path = entry.path();
-		if (boost::filesystem::extension(path) == ".js")
-			loadPlugin(path.generic_string().c_str());
+		for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(pluginDir), {}))
+		{
+			const auto& path = entry.path();
+			if (boost::filesystem::extension(path) == ".js")
+				loadPlugin(path.generic_string().c_str());
+		}
 	}
 }
 

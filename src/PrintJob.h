@@ -36,6 +36,8 @@ public:
 	void progress(size_t& pos, size_t& total) const;
 	const std::string& name() const { return m_jobName; }
 
+	std::chrono::seconds timeElapsed() const;
+
 	boost::signals2::signal<void(State, std::string)>& stateChangeSignal() { return m_stateChangeSignal; }
 	boost::signals2::signal<void(size_t)>& progressChangeSignal() { return m_progressChangeSignal; }
 protected:
@@ -59,6 +61,8 @@ private:
 	size_t m_position = 0, m_size;
 
 	const std::string m_jobName;
+	std::chrono::steady_clock::time_point m_startTime;
+	std::chrono::seconds m_timeElapsed;
 
 	friend class Printer;
 };

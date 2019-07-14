@@ -152,10 +152,10 @@ private:
 			std::string v = std::string("Printer.") + printer->uniqueName() + ".job";
 
 			m_subscriptions.emplace(v, selfTrackingConnect(printJob->stateChangeSignal(),
-				std::bind(&WSSubscriptionServer::jobStateChangeEvent, this, printer->uniqueName(), std::placeholders::_1, std::placeholders::_2)));
+				std::bind(&WSSubscriptionServer::jobStateChangeEvent, this, printer->uniqueName(), printJob.get(), std::placeholders::_1, std::placeholders::_2)));
 
 			m_subscriptions.emplace(v, selfTrackingConnect(printJob->progressChangeSignal(),
-				std::bind(&WSSubscriptionServer::jobProgressEvent, this, printer->uniqueName(), std::placeholders::_1)));
+				std::bind(&WSSubscriptionServer::jobProgressEvent, this, printer->uniqueName(), printJob.get(), std::placeholders::_1)));
 		}
 		return printJob;
 	}
@@ -192,11 +192,12 @@ private:
 		raiseEvent(event);
 	}
 
-	void jobStateChangeEvent(std::string printer, PrintJob::State state, std::string errorString)
+	void jobStateChangeEvent(std::string printer, PrintJob* job, PrintJob::State state, std::string errorString)
 	{
 		nlohmann::json event;
 		nlohmann::json eventObject = {
-			{ "state", PrintJob::stateString(state) }
+			{ "state", PrintJob::stateString(state) },
+			{ "elapsed", job->timeElapsed().count() }
 		};
 
 		if (state == PrintJob::State::Error)
@@ -206,12 +207,13 @@ private:
 		raiseEvent(event);
 	}
 
-	void jobProgressEvent(std::string printer, size_t progress)
+	void jobProgressEvent(std::string printer, PrintJob* job, size_t progress)
 	{
 		nlohmann::json event;
 
 		event["event"]["Printer." + printer + ".job"] = {
-			{ "done", progress }
+			{ "done", progress },
+			{ "elapsed", job->timeElapsed().count() }
 		};
 
 		raiseEvent(event);

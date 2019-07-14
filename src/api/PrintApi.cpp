@@ -298,6 +298,7 @@ namespace
 
 		result["done"] = pos;
 		result["total"] = total;
+		result["elapsed"] = printJob->timeElapsed().count();
 
 		resp.send(result);
 	}
