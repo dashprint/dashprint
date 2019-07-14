@@ -7,6 +7,10 @@ class PluginManager
 public:
 	PluginManager();
 	~PluginManager();
+
+	void loadPlugin(const char* path);
+private:
+	void loadPlugins();
 protected:
 	JSRuntime* runtime() { return m_runtime; }
 private:

@@ -23,7 +23,6 @@ public:
 	{
 		handle(method, regexp, (handler_t) [=](WebRequest& req,WebResponse& res) { handler(req, res, args...); });
 	}
-	template<> void handle(method_t method, const char* regexp, handler_t handler);
 
 	template <typename Handler, typename... Args> void get(const char* regexp, Handler handler, Args... args)
 	{
@@ -79,5 +78,7 @@ private:
 	std::list<filter_t> m_filters;
 	std::string m_prefix;
 };
+
+template<> void WebRouter::handle(method_t method, const char* regexp, handler_t handler);
 
 #endif

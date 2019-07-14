@@ -20,6 +20,7 @@
 #include "api/AuthApi.h"
 #include "api/AuthHelpers.h"
 #include "AuthManager.h"
+#include "PluginManager.h"
 
 static void runApp();
 static void sanityCheck();
@@ -59,6 +60,7 @@ void runApp()
 	PrinterManager printerManager(io, g_config);
 	WebServer webServer(io);
 	AuthManager authManager(g_config.get_child("users"));
+	PluginManager pluginManager;
 
 	auto apiv1 = webServer.router("/api/v1/");
 	

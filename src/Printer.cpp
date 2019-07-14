@@ -75,6 +75,8 @@ const char* Printer::stateName(State state)
 			return "Initializing";
 		case State::Connected:
 			return "Connected";
+		default:
+			return "Error";
 	}
 }
 

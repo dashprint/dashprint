@@ -3,6 +3,7 @@
 #include "quickjs/quickjs.hpp"
 #include <string_view>
 #include <string>
+#include <cassert>
 
 class JSValuePP
 {
@@ -25,6 +26,7 @@ public:
 	{
 		m_context = that.m_context;
 		m_value = that.m_value;
+		that.m_value = JS_UNDEFINED;
 	}
 	~JSValuePP()
 	{
@@ -67,10 +69,9 @@ public:
 
 	JSValuePP& operator=(const JSValuePP&& that)
 	{
-		::JS_FreeValue(m_context, m_value);
-
 		m_context = that.m_context;
 		m_value = that.m_value;
+		that.m_value = JS_UNDEFINED;
 
 		return *this;
 	}
@@ -135,16 +136,23 @@ public:
 		return ::JS_IsException(m_value);
 	}
 
-	JSValuePP&& property(const char* propName)
+	JSValuePP property(const char* propName)
 	{
 		JSValuePP v = { m_context, ::JS_GetPropertyStr(m_context, m_value, propName) };
-		return std::move(v);
+		return v;
 	}
 
-	JSValuePP&& property(uint32_t index)
+	JSValuePP property(uint32_t index)
 	{
 		JSValuePP v = { m_context, ::JS_GetPropertyUint32(m_context, m_value, index) };
-		return std::move(v);
+		return v;
+	}
+
+	static JSValuePP globalObject(JSContext* context)
+	{
+		JSValuePP v (context, ::JS_GetGlobalObject(context));
+		assert(v.isObject());
+		return v;
 	}
 
 	std::string toString()
@@ -157,17 +165,17 @@ public:
 		return rv;
 	}
 
-	static JSValuePP&& null(JSContext* context)
+	static JSValuePP null(JSContext* context)
 	{
 		JSValuePP v(context);
 		v.m_value = JS_NULL;
-		return std::move(v);
+		return v;
 	}
 
-	static JSValuePP&& currentException(JSContext* context)
+	static JSValuePP currentException(JSContext* context)
 	{
 		JSValuePP v(context, ::JS_GetException(context));
-		return std::move(v);
+		return v;
 	}
 private:
 	mutable JSContext* m_context;
