@@ -2,6 +2,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <boost/iostreams/device/mapped_file.hpp>
+#include <boost/algorithm/string.hpp>
 
 FileManager::FileManager(std::string_view directory)
 : m_path(std::string(directory))
@@ -60,6 +61,9 @@ std::vector<FileManager::FileInfo> FileManager::listFiles()
 	{
 		if (boost::filesystem::is_regular_file(p))
 		{
+			if (boost::algorithm::to_lower_copy(boost::filesystem::extension(p)) != ".gcode")
+				continue;
+
 			FileInfo fi;
 			fi.name = p.path().filename().generic_string();
 			fi.length = boost::filesystem::file_size(p.path());
