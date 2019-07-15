@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.1)
 option(WITH_UDEV "Enable udev-based device detection" ON)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 find_package(Threads)
 
@@ -41,6 +42,14 @@ set(LINK_LIBRARIES ${UDEV_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} B
 if(UNIX AND NOT APPLE)
     set(LINK_LIBRARIES ${LINK_LIBRARIES} rt)
 endif()
+
+find_package(bcmhost)
+if (BCMHOST_FOUND)
+    include_directories(${BCMHOST_INCLUDE_DIR})
+    set(LINK_LIBRARIES ${LINK_LIBRARIES} ${BCMHOST_LIBRARY} ${MMAL_LIBRARY} ${MMAL_COMPONENTS_LIBRARY} ${MMAL_CORE_LIBRARY} ${MMAL_UTIL_LIBRARY})
+
+    add_definitions(-DWITH_MMAL_CAMERA)
+endif (BCMHOST_FOUND)
 
 configure_file("${CMAKE_SOURCE_DIR}/dashprint_config.h.in" "${CMAKE_BINARY_DIR}/dashprint_config.h")
 include_directories("${CMAKE_BINARY_DIR}")

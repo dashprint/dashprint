@@ -24,6 +24,10 @@
 #include <signal.h>
 #include <cstring>
 
+#ifdef WITH_MMAL_CAMERA
+#	include <camera/MMALCamera.h>
+#endif
+
 static void runApp();
 static void sanityCheck();
 static void ignoreHup();
@@ -65,6 +69,10 @@ void runApp()
 	WebServer webServer(io);
 	AuthManager authManager(g_config.get_child("users"));
 	PluginManager pluginManager;
+
+#ifdef WITH_MMAL_CAMERA
+	MMALCamera camera;
+#endif
 
 	auto apiv1 = webServer.router("/api/v1/");
 	

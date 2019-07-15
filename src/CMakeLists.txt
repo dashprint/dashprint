@@ -50,6 +50,9 @@ if (WITH_UDEV)
     set(dashprint_sources ${dashprint_sources} UdevPrinterDiscovery.cpp)
 endif (WITH_UDEV)
 
+if (BCMHOST_FOUND)
+    set(dashprint_sources ${dashprint_sources} camera/MMALCamera.cpp)
+endif (BCMHOST_FOUND)
 
 add_executable(dashprint ${dashprint_sources})
 target_link_libraries(dashprint ${LINK_LIBRARIES} OpenSSL::SSL quickjs -ldl)
