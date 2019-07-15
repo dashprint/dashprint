@@ -21,9 +21,12 @@
 #include "api/AuthHelpers.h"
 #include "AuthManager.h"
 #include "PluginManager.h"
+#include <signal.h>
+#include <cstring>
 
 static void runApp();
 static void sanityCheck();
+static void ignoreHup();
 
 boost::property_tree::ptree g_config;
 
@@ -31,6 +34,7 @@ int main(int argc, const char** argv)
 {
 	try
 	{
+		ignoreHup();
 		sanityCheck();
 		
 		loadConfig();
@@ -109,4 +113,13 @@ void sanityCheck()
 	
 	if (!boost::filesystem::is_directory(boost::filesystem::path(home)))
 		throw std::runtime_error("HOME is not set to an existing directory");
+}
+
+void ignoreHup()
+{
+	struct sigaction act = {0};
+	act.sa_handler = SIG_IGN;
+
+	if (::sigaction(SIGHUP, &act, nullptr) == -1)
+		BOOST_LOG_TRIVIAL(warning) << "sigaction(SIGHUP) failed: " << ::strerror(errno);
 }
