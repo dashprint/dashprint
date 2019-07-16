@@ -3,40 +3,42 @@
 #include <string_view>
 #include <memory>
 #include <stdint.h>
-#include "MP4Atom.h"
+
+extern "C" {
+#include <libavformat/avformat.h>
+}
 
 // Annex-B H.264 source
 class H264Source
 {
 public:
 	virtual ~H264Source() {}
-	// Sequence Parameter Set
-	virtual std::string_view spsUnit() const = 0;
-	virtual std::string_view ppsUnit() const = 0;
-	virtual std::string_view readNAL() const = 0;
-
-	// Video dimensions parsing:
-	// https://stackoverflow.com/questions/12018535/get-the-width-height-of-the-video-from-h-264-nalu
-	virtual uint32_t width() const = 0;
-	virtual uint32_t height() const = 0;
+	virtual int read(uint8_t* buf, int bufSize) = 0;
 };
 
 class MP4Sink
 {
 public:
-	virtual void write(std::string_view data) = 0;
-	void write(const MP4Atom& atom) { write(atom.data()); }
+	virtual int write(const uint8_t* buf, int bufSize) = 0;
 };
 
 class MP4Streamer
 {
 public:
 	MP4Streamer(std::shared_ptr<H264Source> source, MP4Sink* target);
-	void start();
+	~MP4Streamer();
+	void run();
+private:
+	static int readPacket(void* opaque, uint8_t* buf, int bufSize);
+	static int writePacket(void* opaque, uint8_t* buf, int bufSize);
+	static int throwAverror(const char* descr, int err);
 private:
 	std::shared_ptr<H264Source> m_source;
 	MP4Sink* m_target;
-	uint64_t m_bytesWritten = 0;
+	uint8_t m_buffer[8192];
+	AVIOContext* m_avioContext = nullptr;
+	AVFormatContext* m_inputFormatContext = nullptr;
+	AVFormatContext* m_outputFormatContext = nullptr;
 };
 
 #endif

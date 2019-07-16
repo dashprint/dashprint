@@ -43,6 +43,7 @@ set(dashprint_sources
     bcrypt/blowfish.c
     PluginManager.cpp
     Plugin.cpp
+    mp4/MP4Streamer.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp
 )
 

@@ -6,6 +6,10 @@ option(WITH_UDEV "Enable udev-based device detection" ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffunction-sections -fdata-sections")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
+
 find_package(Threads)
 
 if (WITH_UDEV)
@@ -49,7 +53,13 @@ if (BCMHOST_FOUND)
     set(LINK_LIBRARIES ${LINK_LIBRARIES} ${BCMHOST_LIBRARY} ${MMAL_LIBRARY} ${MMAL_COMPONENTS_LIBRARY} ${MMAL_CORE_LIBRARY} ${MMAL_UTIL_LIBRARY})
 
     add_definitions(-DWITH_MMAL_CAMERA)
+    set (WITH_CAMERA 1)
 endif (BCMHOST_FOUND)
+
+if (WITH_CAMERA)
+    find_package(avformat REQUIRED)
+    set(LINK_LIBRARIES ${LINK_LIBRARIES} ${AVFORMAT_LIBRARY} ${AVCODEC_LIBRARY} ${AVUTIL_LIBRARY})
+endif (WITH_CAMERA)
 
 configure_file("${CMAKE_SOURCE_DIR}/dashprint_config.h.in" "${CMAKE_BINARY_DIR}/dashprint_config.h")
 include_directories("${CMAKE_BINARY_DIR}")

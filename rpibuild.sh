@@ -25,6 +25,6 @@ if [ ! -f Makefile ]; then
 		#-DBOOST_ROOT="/sysroot/usr/local" \
 		#-DZLIB_LIBRARY="/sysroot/usr/lib/arm-linux-gnueabihf/libz.so" -DZLIB_INCLUDE_DIR="/sysroot/usr/include"
 fi
-make -j4
+make -j4 VERBOSE=1
 END
 

@@ -8,7 +8,9 @@
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
+#include <chrono>
 #include <unistd.h>
+#include "../mp4/MP4Streamer.h"
 
 // Resource:
 // https://github.com/tasanakorn/rpi-mmal-demo/blob/master/video_record.c
@@ -42,6 +44,12 @@ MMALCamera::MMALCamera()
 	setupCameraFormat();
 	setupEncoderFormat();
 	setupConnection();
+
+	for (auto& b : m_buffers)
+		b.reserve(8192);
+
+	m_sps.reserve(30);
+	m_pps.reserve(20);
 }
 
 void MMALCamera::staticInitialization()
@@ -56,7 +64,7 @@ MMALCamera::~MMALCamera()
 {
 	if (m_encoderOutputPool)
 	{
-		::mmal_port_disable(m_encoder->output[0]);
+		stop();
 		::mmal_port_pool_destroy(m_encoder->output[0], m_encoderOutputPool);
 	}
 	if (m_connection)
@@ -147,9 +155,16 @@ void MMALCamera::setupEncoderFormat()
 
 	m_encoderOutputPool = ::mmal_port_pool_create(encoderOutputPort, encoderOutputPort->buffer_num, encoderOutputPort->buffer_size);
 
+	fillPortBuffer(encoderOutputPort, m_encoderOutputPool);
+}
+
+void MMALCamera::start()
+{
+	MMAL_PORT_T* encoderOutputPort = m_encoder->output[0];
+
 	encoderOutputPort->userdata = reinterpret_cast<MMAL_PORT_USERDATA_T*>(this);
 
-	status = ::mmal_port_enable(encoderOutputPort, [](MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) {
+	MMAL_STATUS_T status = ::mmal_port_enable(encoderOutputPort, [](MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer) {
 		MMALCamera* This = reinterpret_cast<MMALCamera*>(port->userdata);
 		This->encoderCallback(buffer);
 	});
@@ -161,7 +176,14 @@ void MMALCamera::setupEncoderFormat()
 		throw std::runtime_error(ss.str());
 	}
 
-	fillPortBuffer(encoderOutputPort, m_encoderOutputPool);
+	m_running = true;
+}
+
+void MMALCamera::stop()
+{
+	::mmal_port_disable(m_encoder->output[0]);
+	m_running = false;
+	m_cv.notify_all();
 }
 
 void MMALCamera::setupConnection()
@@ -196,7 +218,7 @@ void MMALCamera::encoderCallback(MMAL_BUFFER_HEADER_T* buffer)
 
 	// Process H264 data
 	std::basic_string_view<uint8_t> sv(buffer->data, buffer->length);
-	// TODO
+	processBuffer(sv);
 
 	::mmal_buffer_header_mem_unlock(buffer);
 
@@ -234,3 +256,125 @@ void MMALCamera::fillPortBuffer(MMAL_PORT_T* port, MMAL_POOL_T* pool)
 		}
 	}
 }
+
+void MMALCamera::processBuffer(std::basic_string_view<uint8_t> buffer)
+{
+	if (buffer.length() < 5)
+		return;
+	
+	// Expect an Annex-B start sequence
+	if (buffer[0] != 0 || buffer[1] != 0 || buffer[2] != 0 || buffer[3] != 1)
+		return;
+	
+	size_t start = 0;
+	// Split into NAL units
+	for (size_t i = 1; i < buffer.size()-3; i++)
+	{
+		if (buffer[i] == 0 && buffer[i+1] == 0 && buffer[i+2] == 0 && buffer[i+3] == 1)
+		{
+			// This is the start of another NAL
+			auto sv = buffer.substr(start, i-start);
+			start = i;
+			processNAL(sv);
+		}
+	}
+	
+}
+
+void MMALCamera::processNAL(std::basic_string_view<uint8_t> buffer)
+{
+	if (buffer[4] == 0x27)
+	{
+		std::unique_lock<std::mutex> l(m_cvMutex);
+
+		// SPS
+		m_sps.assign(buffer.data(), buffer.data() + buffer.length());
+	}
+	else if (buffer[4] == 0x28)
+	{
+		std::unique_lock<std::mutex> l(m_cvMutex);
+		// PPS
+		m_pps.assign(buffer.data(), buffer.data() + buffer.length());
+	}
+	else
+	{
+		std::unique_lock<std::mutex> l(m_cvMutex);
+
+		// Enqueue this as a standard NAL
+		m_buffers[m_nextBuffer].assign(buffer.data(), buffer.data() + buffer.length());
+		m_nextBuffer = (m_nextBuffer + 1) % std::size(m_buffers);
+	}
+
+	m_cv.notify_all();
+}
+
+class MMALH264Source : public H264Source
+{
+public:
+	MMALH264Source(std::weak_ptr<MMALCamera> camera, int next)
+	: m_camera(camera), m_next(next)
+	{
+	}
+	int read(uint8_t* buf, int bufSize) override
+	{
+		std::shared_ptr<MMALCamera> camera = m_camera.lock();
+		if (!camera || !camera->isRunning())
+			return 0;
+
+		if (!m_providedSPS)
+		{
+			std::unique_lock<std::mutex> l(camera->m_cvMutex);
+
+			if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return !camera->m_sps.empty() || !camera->isRunning(); }))
+				return 0;
+			if (!camera->isRunning())
+				return 0;
+
+			int rd = std::min<int>(camera->m_sps.size(), bufSize);
+			std::memcpy(buf, camera->m_sps.data(), rd);
+
+			m_providedSPS = true;
+			return rd;
+		}
+		else if (!m_providedPPS)
+		{
+			std::unique_lock<std::mutex> l(camera->m_cvMutex);
+
+			if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return !camera->m_pps.empty() || !camera->isRunning(); }))
+				return 0;
+			if (!camera->isRunning())
+				return 0;
+
+			int rd = std::min<int>(camera->m_pps.size(), bufSize);
+			std::memcpy(buf, camera->m_pps.data(), rd);
+
+			m_providedPPS = true;
+			return rd;
+		}
+		else
+		{
+			std::unique_lock<std::mutex> l(camera->m_cvMutex);
+
+			if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return m_next != camera->m_nextBuffer || !camera->isRunning(); }))
+				return 0;
+			if (!camera->isRunning())
+				return 0;
+			
+			int rd = std::min<int>(camera->m_buffers[m_next].size(), bufSize);
+			std::memcpy(buf, camera->m_buffers[m_next].data(), rd);
+
+			m_next = (m_next + 1) % std::size(camera->m_buffers);
+			return rd;
+		}
+	}
+private:
+	std::weak_ptr<MMALCamera> m_camera;
+	bool m_providedSPS = false, m_providedPPS = false;
+	int m_next;
+};
+
+H264Source* MMALCamera::createSource()
+{
+	return new MMALH264Source(weak_from_this(), m_nextBuffer);
+}
+
