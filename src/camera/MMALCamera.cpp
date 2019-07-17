@@ -10,6 +10,9 @@
 #include <string_view>
 #include <chrono>
 #include <unistd.h>
+#include <cassert>
+#include <iostream>
+#include <fstream>
 #include "../mp4/MP4Streamer.h"
 
 // Resource:
@@ -46,10 +49,11 @@ MMALCamera::MMALCamera()
 	setupConnection();
 
 	for (auto& b : m_buffers)
-		b.reserve(8192);
+		b.reserve(8192*4);
 
 	m_sps.reserve(30);
 	m_pps.reserve(20);
+	// m_dump.open("/tmp/dumpc.264", std::ios_base::binary);
 }
 
 void MMALCamera::staticInitialization()
@@ -154,8 +158,6 @@ void MMALCamera::setupEncoderFormat()
 	}
 
 	m_encoderOutputPool = ::mmal_port_pool_create(encoderOutputPort, encoderOutputPort->buffer_num, encoderOutputPort->buffer_size);
-
-	fillPortBuffer(encoderOutputPort, m_encoderOutputPool);
 }
 
 void MMALCamera::start()
@@ -175,6 +177,8 @@ void MMALCamera::start()
 		ss << "Encoder output port enabling failed: " << status;
 		throw std::runtime_error(ss.str());
 	}
+
+	fillPortBuffer(encoderOutputPort, m_encoderOutputPool);
 
 	m_running = true;
 }
@@ -212,6 +216,7 @@ void MMALCamera::setupConnection()
 
 void MMALCamera::encoderCallback(MMAL_BUFFER_HEADER_T* buffer)
 {
+	std::cout << "Encoder callback\n";
 	MMAL_PORT_T* encoderOutputPort = m_encoder->output[0];
 
 	::mmal_buffer_header_mem_lock(buffer);
@@ -259,6 +264,8 @@ void MMALCamera::fillPortBuffer(MMAL_PORT_T* port, MMAL_POOL_T* pool)
 
 void MMALCamera::processBuffer(std::basic_string_view<uint8_t> buffer)
 {
+	// m_dump.write((char*)buffer.data(), buffer.size());
+
 	if (buffer.length() < 5)
 		return;
 	
@@ -278,7 +285,8 @@ void MMALCamera::processBuffer(std::basic_string_view<uint8_t> buffer)
 			processNAL(sv);
 		}
 	}
-	
+	auto sv = buffer.substr(start);
+	processNAL(sv);
 }
 
 void MMALCamera::processNAL(std::basic_string_view<uint8_t> buffer)
@@ -287,6 +295,7 @@ void MMALCamera::processNAL(std::basic_string_view<uint8_t> buffer)
 	{
 		std::unique_lock<std::mutex> l(m_cvMutex);
 
+		std::cout << "SPS from camera\n";
 		// SPS
 		m_sps.assign(buffer.data(), buffer.data() + buffer.length());
 	}
@@ -301,6 +310,7 @@ void MMALCamera::processNAL(std::basic_string_view<uint8_t> buffer)
 		std::unique_lock<std::mutex> l(m_cvMutex);
 
 		// Enqueue this as a standard NAL
+		std::cout << "Writing " << buffer.length() << " into buf " << m_nextBuffer << std::endl;
 		m_buffers[m_nextBuffer].assign(buffer.data(), buffer.data() + buffer.length());
 		m_nextBuffer = (m_nextBuffer + 1) % std::size(m_buffers);
 	}
@@ -314,6 +324,7 @@ public:
 	MMALH264Source(std::weak_ptr<MMALCamera> camera, int next)
 	: m_camera(camera), m_next(next)
 	{
+		// m_dump.open("/tmp/dump.264", std::ios_base::binary);
 	}
 	int read(uint8_t* buf, int bufSize) override
 	{
@@ -325,13 +336,18 @@ public:
 		{
 			std::unique_lock<std::mutex> l(camera->m_cvMutex);
 
-			if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return !camera->m_sps.empty() || !camera->isRunning(); }))
-				return 0;
+			std::cout << "Waiting for SPS...\n";
+			if (camera->m_sps.empty())
+			{
+				if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return !camera->m_sps.empty() || !camera->isRunning(); }))
+					return 0;
+			}
 			if (!camera->isRunning())
 				return 0;
 
 			int rd = std::min<int>(camera->m_sps.size(), bufSize);
 			std::memcpy(buf, camera->m_sps.data(), rd);
+			// m_dump.write((char*) buf, rd);
 
 			m_providedSPS = true;
 			return rd;
@@ -340,13 +356,17 @@ public:
 		{
 			std::unique_lock<std::mutex> l(camera->m_cvMutex);
 
-			if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return !camera->m_pps.empty() || !camera->isRunning(); }))
-				return 0;
+			if (camera->m_pps.empty())
+			{
+				if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return !camera->m_pps.empty() || !camera->isRunning(); }))
+					return 0;
+			}
 			if (!camera->isRunning())
 				return 0;
 
 			int rd = std::min<int>(camera->m_pps.size(), bufSize);
 			std::memcpy(buf, camera->m_pps.data(), rd);
+			// m_dump.write((char*) buf, rd);
 
 			m_providedPPS = true;
 			return rd;
@@ -355,15 +375,26 @@ public:
 		{
 			std::unique_lock<std::mutex> l(camera->m_cvMutex);
 
-			if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return m_next != camera->m_nextBuffer || !camera->isRunning(); }))
-				return 0;
+			if (m_next == camera->m_nextBuffer && m_offset == 0)
+			{
+				if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return m_next != camera->m_nextBuffer || !camera->isRunning(); }))
+					return 0;
+			}
 			if (!camera->isRunning())
 				return 0;
 			
-			int rd = std::min<int>(camera->m_buffers[m_next].size(), bufSize);
-			std::memcpy(buf, camera->m_buffers[m_next].data(), rd);
+			int rd = std::min<int>(camera->m_buffers[m_next].size() - m_offset, bufSize);
+			std::memcpy(buf, camera->m_buffers[m_next].data() + m_offset, rd);
+			// m_dump.write((char*) buf, rd);
+			std::cout << "Delivering " << rd << " bytes from buf " << m_next << std::endl;
 
-			m_next = (m_next + 1) % std::size(camera->m_buffers);
+			if (m_offset + rd >= camera->m_buffers[m_next].size())
+			{
+				m_next = (m_next + 1) % std::size(camera->m_buffers);
+				m_offset = 0;
+			}
+			else
+				m_offset += rd;
 			return rd;
 		}
 	}
@@ -371,6 +402,8 @@ private:
 	std::weak_ptr<MMALCamera> m_camera;
 	bool m_providedSPS = false, m_providedPPS = false;
 	int m_next;
+	size_t m_offset = 0;
+	// std::ofstream m_dump;
 };
 
 H264Source* MMALCamera::createSource()
@@ -378,3 +411,51 @@ H264Source* MMALCamera::createSource()
 	return new MMALH264Source(weak_from_this(), m_nextBuffer);
 }
 
+std::list<DetectedCamera> MMALCamera::detectCameras()
+{
+	std::list<DetectedCamera> rv;
+	VCHI_INSTANCE_T vchi;
+	VCHI_CONNECTION_T* vchi_connections;
+
+	::bcm_host_init();
+	::vcos_init();
+
+	if (::vchi_initialise(&vchi) != 0)
+		return rv;
+	if (::vchi_connect(nullptr, 0, vchi) != 0)
+		return rv;
+	::vc_vchi_gencmd_init(vchi, &vchi_connections, 1);
+
+	char response[128];
+	int res = ::vc_gencmd(response, sizeof(response), "get_camera");
+
+	::vc_gencmd_stop();
+	::vchi_disconnect(vchi);
+
+	if (res != 0)
+		return rv;
+
+	int supported, detected;
+	if (::sscanf(response, "supported=%d detected=%d", &supported, &detected) != 2)
+		return rv;
+
+	if (!supported || !detected)
+		return rv;
+	
+	DetectedCamera cam;
+	cam.id = "rpicam";
+	cam.name = "Raspberry Pi camera";
+	cam.instantiate = []() -> Camera* { return new MMALCamera; };
+
+	CameraParameter param;
+	param.id = "bitrate";
+	param.description = "Bitrate";
+	param.parameterType = CameraParameter::ParameterType::Integer;
+	param.minIntegerValue = 200000; // 200 kbit/s
+	param.maxIntegerValue = 25000000; // 25 Mbit/s
+	param.defaultIntegerValue = 2000000; // 2 Mbit/s
+	cam.parameters.emplace_back(std::move(param));
+
+	rv.emplace_back(std::move(cam));
+	return rv;
+}

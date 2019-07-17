@@ -7,11 +7,14 @@
 #include <memory>
 #include <mutex>
 #include <condition_variable>
+#include <fstream>
+#include <list>
 #include <stdint.h>
+#include "Camera.h"
 
 class H264Source;
 
-class MMALCamera : std::enable_shared_from_this<MMALCamera>
+class MMALCamera : public Camera, public std::enable_shared_from_this<MMALCamera>
 {
 public:
 	MMALCamera();
@@ -21,6 +24,8 @@ public:
 	void stop();
 	bool isRunning() const { return m_running; }
 	H264Source* createSource();
+
+	static std::list<DetectedCamera> detectCameras();
 private:
 	void setupCameraFormat();
 	void setupEncoderFormat();
@@ -38,11 +43,12 @@ private:
 	MMAL_CONNECTION_T* m_connection = nullptr;
 	bool m_running = false;
 protected:
-	std::vector<uint8_t> m_buffers[10];
+	std::vector<uint8_t> m_buffers[20];
 	int m_nextBuffer = 0;
 	std::vector<uint8_t> m_sps, m_pps;
 	std::condition_variable m_cv;
 	std::mutex m_cvMutex;
+	// std::ofstream m_dump;
 
 	friend class MMALH264Source;
 };

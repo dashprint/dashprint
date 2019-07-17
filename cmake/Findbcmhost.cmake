@@ -43,6 +43,24 @@ find_library(MMAL_UTIL_LIBRARY
 	"lib"
 )
 
+find_library(VCOS_LIBRARY
+	NAMES
+	vcos
+	PATHS
+	"/opt/vc"
+	PATH_SUFFIXES
+	"lib"
+)
+
+find_library(VCHIQ_LIBRARY
+	NAMES
+	vchiq_arm
+	PATHS
+	"/opt/vc"
+	PATH_SUFFIXES
+	"lib"
+)
+
 find_path(BCMHOST_INCLUDE_DIR
 	NAMES
 	bcm_host.h

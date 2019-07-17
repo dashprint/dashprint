@@ -14,13 +14,13 @@ BUILD_DIR=${PWD}
 
 echo "Will cdinto ${BUILD_DIR}, src root is ${SRC_ROOT}"
 
-docker run --rm=true -i --user $UID -v ${SRC_ROOT}:${SRC_ROOT} lubosd/dashprint-rpidocker:1.0 /bin/bash -s <<END
+docker run --rm=true -i --user $UID -v ${SRC_ROOT}:${SRC_ROOT} lubosd/dashprint-rpidocker:test /bin/bash -s <<END
 set -e
 #(cd ${SRC_ROOT}/web && ng build)
 cd ${BUILD_DIR}
 #rm -f webdata.cpp
 if [ ! -f Makefile ]; then
-	cmake ${SRC_ROOT} -DCMAKE_TOOLCHAIN_FILE=${SRC_ROOT}/Toolchain-rpidocker.cmake -DCMAKE_MAKE_PROGRAM=make
+	cmake ${SRC_ROOT} -DCMAKE_TOOLCHAIN_FILE=${SRC_ROOT}/Toolchain-rpidocker.cmake -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Debug
 		#-DUDEV_LIBRARY="/sysroot/lib/arm-linux-gnueabihf/libudev.so.1" -DUDEV_INCLUDE_DIR="/sysroot/usr/include" \
 		#-DBOOST_ROOT="/sysroot/usr/local" \
 		#-DZLIB_LIBRARY="/sysroot/usr/lib/arm-linux-gnueabihf/libz.so" -DZLIB_INCLUDE_DIR="/sysroot/usr/include"

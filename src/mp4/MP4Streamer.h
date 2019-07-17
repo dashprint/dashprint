@@ -2,6 +2,7 @@
 #define _MP4STREAMER_H
 #include <string_view>
 #include <memory>
+#include <functional>
 #include <stdint.h>
 
 extern "C" {
@@ -22,6 +23,21 @@ public:
 	virtual int write(const uint8_t* buf, int bufSize) = 0;
 };
 
+class MP4SinkLambda : public MP4Sink
+{
+public:
+	typedef std::function<int(const uint8_t* buf, int bufSize)> lambda_t;
+	MP4SinkLambda(lambda_t l) : m_lambda(l)
+	{
+	}
+	int write(const uint8_t* buf, int bufSize) override
+	{
+		return m_lambda(buf, bufSize);
+	}
+private:
+	lambda_t m_lambda;
+};
+
 class MP4Streamer
 {
 public:
@@ -35,8 +51,8 @@ private:
 private:
 	std::shared_ptr<H264Source> m_source;
 	MP4Sink* m_target;
-	uint8_t m_buffer[8192];
-	AVIOContext* m_avioContext = nullptr;
+	AVIOContext* m_avioContextIn = nullptr;
+	AVIOContext* m_avioContextOut = nullptr;
 	AVFormatContext* m_inputFormatContext = nullptr;
 	AVFormatContext* m_outputFormatContext = nullptr;
 };

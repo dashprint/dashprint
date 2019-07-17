@@ -25,7 +25,10 @@
 #include <cstring>
 
 #ifdef WITH_MMAL_CAMERA
-#	include <camera/MMALCamera.h>
+#	include "camera/MMALCamera.h"
+#	include "mp4/MP4Streamer.h"
+#	include <thread>
+#	include <fstream>
 #endif
 
 static void runApp();
@@ -71,7 +74,32 @@ void runApp()
 	PluginManager pluginManager;
 
 #ifdef WITH_MMAL_CAMERA
-	MMALCamera camera;
+	std::shared_ptr<MMALCamera> camera = std::make_shared<MMALCamera>();
+	camera->start();
+
+	std::thread testThread([&]() {
+		std::ofstream dump;
+
+		auto fn = [&](const uint8_t* buf, int bufSize) -> int {
+			dump.write((char*) buf, bufSize);
+			return bufSize;
+		};
+
+		try
+		{
+			MP4SinkLambda target(fn);
+			std::shared_ptr<H264Source> source(camera->createSource());
+			MP4Streamer streamer(source, &target);
+
+			dump.open("/tmp/camera.mp4", std::ios_base::binary);
+
+			streamer.run();
+		}
+		catch (const std::exception& e)
+		{
+			BOOST_LOG_TRIVIAL(fatal) << "Camera/mp4 error: " << e.what();
+		}
+	});
 #endif
 
 	auto apiv1 = webServer.router("/api/v1/");
