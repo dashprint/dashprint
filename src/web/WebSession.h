@@ -48,7 +48,8 @@ protected:
 	template<bool isRequest, class Body, class Fields> void send(boost::beast::http::message<isRequest, Body, Fields>&& response);
 	const std::string& bodyFile() const { return m_bodyFile; }
 
-	boost::asio::ip::tcp::socket&& socket() { return std::move(m_socket); }
+	boost::asio::ip::tcp::socket&& moveSocket() { return std::move(m_socket); }
+	boost::asio::ip::tcp::socket& socket() { return m_socket; }
 
 	WebServer* m_server;
 	boost::asio::ip::tcp::socket m_socket;

@@ -20,12 +20,12 @@ public:
 	MMALCamera();
 	~MMALCamera();
 
-	void start();
-	void stop();
-	bool isRunning() const { return m_running; }
-	H264Source* createSource();
+	void start() override;
+	void stop() override;
+	bool isRunning() const override { return m_running; }
+	H264Source* createSource() override;
 
-	static std::list<DetectedCamera> detectCameras();
+	static std::map<std::string, DetectedCamera> detectCameras();
 private:
 	void setupCameraFormat();
 	void setupEncoderFormat();

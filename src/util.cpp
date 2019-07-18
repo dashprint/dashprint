@@ -56,6 +56,8 @@ void loadConfig()
 
 		if (!g_config.get_child_optional("users"))
 			g_config.put_child("users", boost::property_tree::ptree());
+		if (!g_config.get_child_optional("cameras"))
+			g_config.put_child("cameras", boost::property_tree::ptree());
 	}
 	catch (const std::exception& e)
 	{

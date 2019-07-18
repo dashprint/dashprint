@@ -32,6 +32,7 @@ set(dashprint_sources
     api/WebSockets.cpp
     api/AuthApi.cpp
     api/AuthHelpers.cpp
+    api/CameraApi.cpp
     Printer.cpp
     PrinterManager.cpp
     util.cpp
@@ -45,6 +46,7 @@ set(dashprint_sources
     Plugin.cpp
     mp4/MP4Streamer.cpp
     camera/Camera.cpp
+    CameraManager.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp
 )
 

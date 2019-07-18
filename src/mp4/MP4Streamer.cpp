@@ -44,6 +44,8 @@ MP4Streamer::~MP4Streamer()
 
 void MP4Streamer::run()
 {
+	m_stop = false;
+	
 	int status = ::avformat_open_input(&m_inputFormatContext, "/tmp/working.264", nullptr, nullptr);
 	if (status != 0)
 		throwAverror("avformat_open_input() failed:", status);
@@ -79,7 +81,7 @@ void MP4Streamer::run()
 		throwAverror("avformat_write_header() failed:", status);
 
 	int64_t dts = 0;
-	while (true)
+	while (!m_stop)
 	{
 		AVPacket packet;
 

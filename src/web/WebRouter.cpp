@@ -80,11 +80,11 @@ void WebRouter::runHandler(WebRequest& req, WebResponse& res)
 void WebRouter::runHandlerNoFilters(WebRequest& req, WebResponse& res)
 {
 	handler_t handler;
-	std::string target = std::string(req.request().target());
+	const std::string& target = req.target();
 
 	for (const subroute& sr : m_subroutes)
 	{
-		if (target.compare(m_prefix.length(), m_prefix.length()+sr.prefix.length(), sr.prefix) == 0)
+		if (target.compare(m_prefix.length(), sr.prefix.length(), sr.prefix) == 0)
 			return sr.router->runHandler(req, res);
 	}
 

@@ -54,13 +54,10 @@ if (BCMHOST_FOUND)
         ${MMAL_COMPONENTS_LIBRARY} ${MMAL_CORE_LIBRARY} ${MMAL_UTIL_LIBRARY} ${VCOS_LIBRARY} ${VCHIQ_LIBRARY})
 
     add_definitions(-DWITH_MMAL_CAMERA)
-    set (WITH_CAMERA 1)
 endif (BCMHOST_FOUND)
 
-if (WITH_CAMERA)
-    find_package(avformat REQUIRED)
-    set(LINK_LIBRARIES ${LINK_LIBRARIES} ${AVFORMAT_LIBRARY} ${AVCODEC_LIBRARY} ${AVUTIL_LIBRARY} "/sysroot/usr/local/lib/libswresample.a")
-endif (WITH_CAMERA)
+find_package(avformat REQUIRED)
+set(LINK_LIBRARIES ${LINK_LIBRARIES} ${AVFORMAT_LIBRARY} ${AVCODEC_LIBRARY} ${AVUTIL_LIBRARY})
 
 configure_file("${CMAKE_SOURCE_DIR}/dashprint_config.h.in" "${CMAKE_BINARY_DIR}/dashprint_config.h")
 include_directories("${CMAKE_BINARY_DIR}")

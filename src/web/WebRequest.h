@@ -12,8 +12,7 @@ class WebRequest
 public:
 	WebRequest(const boost::beast::http::request<boost::beast::http::string_body>& request,
 		const std::string& requestFile,
-		std::shared_ptr<WebSession> webSession)
-		: m_request(request), m_requestFile(requestFile), m_webSession(webSession) {}
+		std::shared_ptr<WebSession> webSession);
 
 	const boost::beast::http::request<boost::beast::http::string_body>& request() const { return m_request; }
 
@@ -38,15 +37,27 @@ public:
 	std::string pathParam(const char* sub) const { return m_matches.str(sub); }
 
 	std::map<std::string, std::string>& privateData() { return m_privateData; }
+	std::map<std::string, std::string>& queryParams() { return m_queryParams; }
+
+	const std::string& target() const { return m_target; }
+	const std::string& queryString() const { return m_queryString; }
+
+	const char* queryParam(const char* name);
 protected:
 	boost::asio::ip::tcp::socket&& socket();
 	boost::cmatch& matches() { return m_matches; }
+private:
+	void parseQueryString(const std::string& qs);
+	void parseQueryStringKV(std::string_view sv);
+	static std::string urlDecode(std::string_view in);
 private:
 	const boost::beast::http::request<boost::beast::http::string_body>& m_request;
 	const std::string& m_requestFile;
 	boost::cmatch m_matches;
 	std::shared_ptr<WebSession> m_webSession;
 	std::map<std::string, std::string> m_privateData;
+	std::string m_target, m_queryString;
+	std::map<std::string, std::string> m_queryParams;
 
 	// for websockets
 	friend class WebRouter;

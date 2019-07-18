@@ -19,8 +19,10 @@
 #include "api/WebSockets.h"
 #include "api/AuthApi.h"
 #include "api/AuthHelpers.h"
+#include "api/CameraApi.h"
 #include "AuthManager.h"
 #include "PluginManager.h"
+#include "CameraManager.h"
 #include <signal.h>
 #include <cstring>
 
@@ -72,8 +74,9 @@ void runApp()
 	WebServer webServer(io);
 	AuthManager authManager(g_config.get_child("users"));
 	PluginManager pluginManager;
+	CameraManager cameraManager(g_config.get_child("cameras"));
 
-#ifdef WITH_MMAL_CAMERA
+#if 0
 	std::shared_ptr<MMALCamera> camera = std::make_shared<MMALCamera>();
 	camera->start();
 
@@ -108,6 +111,7 @@ void runApp()
 	routeAuth(apiv1, authManager);
 	routeOctoprintRest(webServer.router("/api/")->addFilter(checkOctoprintKey(&authManager)), fileManager, printerManager, authManager);
 	routeWebSockets(webServer.router("/websocket"), fileManager, printerManager, authManager);
+	routeCamera(apiv1->router("camera/"), cameraManager, authManager);
 	
 	// Fallback for static resources
 	webServer.get(".*", [](WebRequest& req, WebResponse& res) {

@@ -3,13 +3,22 @@
 #include <functional>
 #include <string>
 #include <list>
+#include <map>
+#include <memory>
 
 struct DetectedCamera;
+class H264Source;
 
 class Camera
 {
 public:
-	static std::list<DetectedCamera> detectCameras();
+	virtual ~Camera() {}
+	static std::map<std::string, DetectedCamera, std::less<>> detectCameras();
+
+	virtual void start() = 0;
+	virtual void stop() = 0;
+	virtual bool isRunning() const = 0;
+	virtual H264Source* createSource() = 0;
 };
 
 struct CameraParameter
@@ -33,7 +42,7 @@ struct CameraParameter
 
 struct DetectedCamera
 {
-	typedef std::function<Camera*()> ctor_t;
+	typedef std::function<std::shared_ptr<Camera>()> ctor_t;
 
 	std::string id, name;
 	ctor_t instantiate;

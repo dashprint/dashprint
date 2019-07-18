@@ -66,6 +66,8 @@ void MMALCamera::staticInitialization()
 
 MMALCamera::~MMALCamera()
 {
+	BOOST_LOG_TRIVIAL(debug) << "MMALCamera destroying";
+
 	if (m_encoderOutputPool)
 	{
 		stop();
@@ -162,6 +164,8 @@ void MMALCamera::setupEncoderFormat()
 
 void MMALCamera::start()
 {
+	BOOST_LOG_TRIVIAL(debug) << "MMALCamera starting";
+
 	MMAL_PORT_T* encoderOutputPort = m_encoder->output[0];
 
 	encoderOutputPort->userdata = reinterpret_cast<MMAL_PORT_USERDATA_T*>(this);
@@ -185,6 +189,8 @@ void MMALCamera::start()
 
 void MMALCamera::stop()
 {
+	BOOST_LOG_TRIVIAL(debug) << "MMALCamera stopping";
+
 	::mmal_port_disable(m_encoder->output[0]);
 	m_running = false;
 	m_cv.notify_all();
@@ -330,7 +336,13 @@ public:
 	{
 		std::shared_ptr<MMALCamera> camera = m_camera.lock();
 		if (!camera || !camera->isRunning())
+		{
+			if (!camera)
+				BOOST_LOG_TRIVIAL(debug) << "MMALH264Source: Camera is gone";
+			else
+				BOOST_LOG_TRIVIAL(debug) << "MMALH264Source: Camera is stopped";
 			return 0;
+		}
 
 		if (!m_providedSPS)
 		{
@@ -411,41 +423,52 @@ H264Source* MMALCamera::createSource()
 	return new MMALH264Source(weak_from_this(), m_nextBuffer);
 }
 
-std::list<DetectedCamera> MMALCamera::detectCameras()
+std::map<std::string, DetectedCamera> MMALCamera::detectCameras()
 {
-	std::list<DetectedCamera> rv;
-	VCHI_INSTANCE_T vchi;
-	VCHI_CONNECTION_T* vchi_connections;
+	static int lastDetectionResult = -1;
 
-	::bcm_host_init();
-	::vcos_init();
+	std::map<std::string, DetectedCamera> rv;
+	if (lastDetectionResult == -1)
+	{
+		VCHI_INSTANCE_T vchi;
+		VCHI_CONNECTION_T* vchi_connections;
 
-	if (::vchi_initialise(&vchi) != 0)
-		return rv;
-	if (::vchi_connect(nullptr, 0, vchi) != 0)
-		return rv;
-	::vc_vchi_gencmd_init(vchi, &vchi_connections, 1);
+		::bcm_host_init();
+		::vcos_init();
 
-	char response[128];
-	int res = ::vc_gencmd(response, sizeof(response), "get_camera");
+		lastDetectionResult = 0;
 
-	::vc_gencmd_stop();
-	::vchi_disconnect(vchi);
+		if (::vchi_initialise(&vchi) != 0)
+			return rv;
+		if (::vchi_connect(nullptr, 0, vchi) != 0)
+			return rv;
+		::vc_vchi_gencmd_init(vchi, &vchi_connections, 1);
 
-	if (res != 0)
-		return rv;
+		char response[128];
+		int res = ::vc_gencmd(response, sizeof(response), "get_camera");
 
-	int supported, detected;
-	if (::sscanf(response, "supported=%d detected=%d", &supported, &detected) != 2)
-		return rv;
+		::vc_gencmd_stop();
+		::vchi_disconnect(vchi);
 
-	if (!supported || !detected)
+		if (res != 0)
+			return rv;
+
+		int supported, detected;
+		if (::sscanf(response, "supported=%d detected=%d", &supported, &detected) != 2)
+			return rv;
+
+		if (!supported || !detected)
+			return rv;
+
+		lastDetectionResult = 1;
+	}
+	else if (lastDetectionResult == 0)
 		return rv;
 	
 	DetectedCamera cam;
 	cam.id = "rpicam";
 	cam.name = "Raspberry Pi camera";
-	cam.instantiate = []() -> Camera* { return new MMALCamera; };
+	cam.instantiate = []() -> std::shared_ptr<Camera> { return std::make_shared<MMALCamera>(); };
 
 	CameraParameter param;
 	param.id = "bitrate";
@@ -456,6 +479,6 @@ std::list<DetectedCamera> MMALCamera::detectCameras()
 	param.defaultIntegerValue = 2000000; // 2 Mbit/s
 	cam.parameters.emplace_back(std::move(param));
 
-	rv.emplace_back(std::move(cam));
+	rv.emplace(std::make_pair(cam.id, std::move(cam)));
 	return rv;
 }

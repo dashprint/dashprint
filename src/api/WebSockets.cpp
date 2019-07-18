@@ -229,7 +229,7 @@ private:
 void routeWebSockets(WebRouter* router, FileManager& fileManager, PrinterManager& printerManager, AuthManager& authManager)
 {
 	router->addFilter([=, &authManager](WebRequest& req,WebResponse& resp, WebRouter::handler_t next) {
-		std::string_view sv = req.request().target();
+		const std::string& sv = req.target();
 		auto pos = sv.rfind('/');
 
 		std::string token = std::string(sv.substr(pos+1));

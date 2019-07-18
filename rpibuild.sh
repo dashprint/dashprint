@@ -14,7 +14,7 @@ BUILD_DIR=${PWD}
 
 echo "Will cdinto ${BUILD_DIR}, src root is ${SRC_ROOT}"
 
-docker run --rm=true -i --user $UID -v ${SRC_ROOT}:${SRC_ROOT} lubosd/dashprint-rpidocker:test /bin/bash -s <<END
+docker run --rm=true -i --user $UID -v ${SRC_ROOT}:${SRC_ROOT} lubosd/dashprint-rpidocker:1.0 /bin/bash -s <<END
 set -e
 #(cd ${SRC_ROOT}/web && ng build)
 cd ${BUILD_DIR}

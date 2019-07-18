@@ -23,6 +23,10 @@ public:
 	void send(const nlohmann::json& json, http_status status = http_status::ok);
 	void sendFile(const char* path, http_status status = http_status::ok);
 
+	bool sendChunked(http_status status, const std::map<std::string,std::string>& headers = std::map<std::string,std::string>());
+	bool sendChunk(const void* data, size_t length);
+	void sendFinalChunk();
+
 	static std::string_view mimeType(std::string_view path);
 private:
 	std::shared_ptr<WebSession> m_session;

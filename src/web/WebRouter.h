@@ -19,24 +19,29 @@ public:
 	typedef std::function<bool(WebSocketHandler&,WebRequest&,WebResponse&)> wshandler_t;
 	typedef boost::beast::http::verb method_t;
 
-	template <typename Handler, typename... Args> void handle(method_t method, const char* regexp, Handler handler, Args&&... args)
+	// TODO: In C++20
+	// https://stackoverflow.com/a/49902823/479753
+	template <typename Handler, typename... Args> void handle(method_t method, const char* regexp, Handler handler, Args... args)
 	{
-		handle(method, regexp, (handler_t) [=,&args...](WebRequest& req,WebResponse& res) { handler(req, res, std::forward<Args>(args)...); });
+		// Workaround as per https://stackoverflow.com/a/49902823/479753
+		handle(method, regexp, (handler_t) [=](WebRequest& req,WebResponse& res) {
+			handler(req, res, args...);
+		});
 	}
 
-	template <typename Handler, typename... Args> void get(const char* regexp, Handler handler, Args&&... args)
+	template <typename Handler, typename... Args> void get(const char* regexp, Handler handler, Args... args)
 	{
 		handle(method_t::get, regexp, handler, args...);
 	}
-	template <typename Handler, typename... Args> void post(const char* regexp, Handler handler, Args&&... args)
+	template <typename Handler, typename... Args> void post(const char* regexp, Handler handler, Args... args)
 	{
 		handle(method_t::post, regexp, handler, args...);
 	}
-	template <typename Handler, typename... Args> void put(const char* regexp, Handler handler, Args&&... args)
+	template <typename Handler, typename... Args> void put(const char* regexp, Handler handler, Args... args)
 	{
 		handle(method_t::put, regexp, handler, args...);
 	}
-	template <typename Handler, typename... Args> void delete_(const char* regexp, Handler handler, Args&&... args)
+	template <typename Handler, typename... Args> void delete_(const char* regexp, Handler handler, Args... args)
 	{
 		handle(method_t::delete_, regexp, handler, args...);
 	}
@@ -50,11 +55,11 @@ public:
 	WebRouter* addFilter(filter_t filter) { m_filters.push_back(filter); return this; }
 
 	template <typename Callable, typename... Args>
-	static WebRouter::handler_t inlineFilter(filter_t filter, Callable c, Args&&... args)
+	static WebRouter::handler_t inlineFilter(filter_t filter, Callable c, Args... args)
 	{
-		return [=,&args...](WebRequest& req, WebResponse& resp) {
-			filter(req, resp, [=,&args...](WebRequest& req, WebResponse& resp) {
-				c(req, resp, std::forward<Args>(args)...);
+		return [=](WebRequest& req, WebResponse& resp) {
+			filter(req, resp, [=](WebRequest& req, WebResponse& resp) {
+				c(req, resp, args...);
 			});
 		};
 	}
