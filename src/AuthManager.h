@@ -16,11 +16,12 @@ public:
 	std::string generateToken(const char* username);
 	std::string checkToken(std::string_view) const;
 	std::string userOctoprintCompatKey(const char* username) const;
+
+	static std::string generateSharedSecret(size_t length);
 private:
 	static std::string generateSalt();
 	static std::string hashPassword(const char* password);
 	static bool checkPassword(const char* password, std::string_view hash);
-	static std::string generateSharedSecret(size_t length);
 
 	void setupSharedSecret();
 private:

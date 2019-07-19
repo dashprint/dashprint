@@ -33,6 +33,7 @@ set(dashprint_sources
     api/AuthApi.cpp
     api/AuthHelpers.cpp
     api/CameraApi.cpp
+    api/FileApi.cpp
     Printer.cpp
     PrinterManager.cpp
     util.cpp

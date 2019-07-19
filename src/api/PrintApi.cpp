@@ -19,6 +19,7 @@
 #include "PrinterManager.h"
 #include "util.h"
 #include "PrintJob.h"
+#include "AuthManager.h"
 
 namespace
 {
@@ -54,7 +55,8 @@ namespace
 				{"connected",   printer->state() == Printer::State::Connected},
 				{"width", printer->printArea().width},
 				{"height", printer->printArea().height},
-				{"depth", printer->printArea().depth}
+				{"depth", printer->printArea().depth},
+				{"state", Printer::stateName(printer->state())}
 		};
 	}
 
@@ -68,6 +70,22 @@ namespace
 			throw WebErrors::not_found("Unknown printer");
 
 		resp.send(jsonFillPrinter(printer, printer->name() == defaultPrinter));
+	}
+
+	void restPrinterReset(WebRequest& req, WebResponse& resp, PrinterManager* printerManager)
+	{
+		std::string name = req.pathParam(1);
+		std::string defaultPrinter = printerManager->defaultPrinter();
+		std::shared_ptr<Printer> printer = printerManager->printer(name.c_str());
+
+		if (!printer)
+			throw WebErrors::not_found("Unknown printer");
+
+		if (printer->state() != Printer::State::Error)
+			throw WebErrors::bad_request("The printer is not in error state");
+		printer->resetPrinter();
+		
+		resp.send(WebResponse::http_status::no_content);
 	}
 
 	void restPrinters(WebRequest& req, WebResponse& resp, PrinterManager* printerManager)
@@ -384,66 +402,75 @@ namespace
 			resp.send(WebResponse::http_status::no_content);
 	}
 
-
-	void restListFiles(WebRequest& req, WebResponse& resp, FileManager* fileManager)
+	void restGetGcodeHistory(WebRequest& req, WebResponse& resp, PrinterManager* printerManager)
 	{
-		std::vector<FileManager::FileInfo> files = fileManager->listFiles();
+		std::string name = req.pathParam(1);
+
+		std::shared_ptr<Printer> printer = printerManager->printer(name.c_str());
+		if (!printer)
+			throw WebErrors::not_found("Printer not found");
+
 		nlohmann::json result = nlohmann::json::array();
+		std::list<Printer::GCodeEvent> gcodeHistory = printer->gcodeHistory();
 
-		for (const FileManager::FileInfo& file : files)
+		for (const auto& e : gcodeHistory)
 		{
-			nlohmann::json ff = nlohmann::json::object();
+			nlohmann::json line = {
+				{ "id", e.commandId },
+				{ "outgoing", e.outgoing },
+				{ "data", e.data }
+			};
 
-			ff["name"] = file.name;
-			ff["length"] = file.length;
-			ff["mtime"] = file.modifiedTime;
+			if (!e.tag.empty())
+				line["tag"] = e.tag;
 
-			result.push_back(ff);
+			result.push_back(line);
 		}
 
-		resp.send(result, WebResponse::http_status::ok);
+		resp.send(result);
 	}
 
-	void restDeleteFile(WebRequest& req, WebResponse& resp, FileManager* fileManager)
+	void restSubmitGcode(WebRequest& req, WebResponse& resp, PrinterManager* printerManager)
 	{
 		std::string name = req.pathParam(1);
-		std::string path = fileManager->getFilePath(name.c_str());
 
-		if (!boost::filesystem::is_regular_file(path))
-			throw WebErrors::not_found(".gcode file not found");
-		
-		if (!boost::filesystem::remove(path))
-			throw WebErrors::not_found("Cannot delete file");
-		
-		resp.send(WebResponse::http_status::no_content);
-	}
+		std::shared_ptr<Printer> printer = printerManager->printer(name.c_str());
 
-	void restUploadFile(WebRequest& req, WebResponse& resp, FileManager* fileManager)
-	{
-		std::string name = req.pathParam(1);
-		
+		if (!printer)
+			throw WebErrors::not_found("Printer not found");
+		if (printer->state() != Printer::State::Connected)
+			throw WebErrors::bad_request("Printer not connected");
+
 		if (req.hasRequestFile())
-			name = fileManager->saveFile(name.c_str(), req.requestFile().c_str());
-		else
-			name = fileManager->saveFile(name.c_str(), req.request().body().c_str(), req.request().body().length());
+			throw WebErrors::bad_request("GCode data too long");
+		
+		if (req.request().body().length() > 200)
+			throw WebErrors::bad_request("GCode data too long");
+		if (req.request().body().length() == 0)
+			throw WebErrors::bad_request("Missing GCode data");
+		
+		std::string line = req.request().body();
 
-		std::string realUrl = req.baseUrl() + "/api/v1/files/" + name;
-		resp.set(WebResponse::http_header::location, realUrl);
-		resp.send(boost::beast::http::status::created);
+		if (line.find('\n') != std::string::npos)
+			throw WebErrors::bad_request("Multiline GCode not accepted");
+		
+		auto invalidChar = std::find_if(line.begin(), line.end(), [](char c) {
+			return c < 0x20 || c > 0x7e;
+		});
+
+		if (invalidChar != line.end())
+			throw WebErrors::bad_request("Invalid characters encountered");
+
+		std::string tag = AuthManager::generateSharedSecret(10);
+		printer->sendCommand(line.c_str(), nullptr, tag);
+
+		resp.send(nlohmann::json {
+			{ "tag", tag }
+		});
 	}
-
-	void restDownloadFile(WebRequest& req, WebResponse& resp, FileManager* fileManager)
-	{
-		std::string name = req.pathParam(1);
-		std::string path = fileManager->getFilePath(name.c_str());
-
-		resp.sendFile(path.c_str());
-	}
-
-
 }
 
-void routeRest(WebRouter* router, FileManager& fileManager, PrinterManager& printerManager)
+void routePrinter(WebRouter* router, FileManager& fileManager, PrinterManager& printerManager)
 {
 	router->post("printers/discover", restPrintersDiscover);
 	router->get("printers", restPrinters, &printerManager);
@@ -451,17 +478,16 @@ void routeRest(WebRouter* router, FileManager& fileManager, PrinterManager& prin
 	
 	router->put("printers/([^/]+)", restSetupPrinter, &printerManager);
 	router->get("printers/([^/]+)", restPrinter, &printerManager);
+	router->post("printers/([^/]+)/reset", restPrinterReset, &printerManager);
 	router->delete_("printers/([^/]+)", restDeletePrinter, &printerManager);
 
 	router->post("printers/([^/]+)/job", restSubmitJob, &printerManager, &fileManager);
 	router->put("printers/([^/]+)/job", restModifyJob, &printerManager);
 	router->get("printers/([^/]+)/job", restGetJob, &printerManager);
 
+	router->get("printers/([^/]+)/gcode", restGetGcodeHistory, &printerManager);
+	router->post("printers/([^/]+)/gcode", restSubmitGcode, &printerManager);
+
 	router->put("printers/([^/]+)/temperatures", restSetPrinterTemperatures, &printerManager);
 	router->get("printers/([^/]+)/temperatures", restGetPrinterTemperatures, &printerManager);
-
-	router->post("files/([^/]+)", restUploadFile, &fileManager);
-	router->get("files/([^/]+)", restDownloadFile, &fileManager);
-	router->delete_("files/([^/]+)", restDeleteFile, &fileManager);
-	router->get("files", restListFiles, &fileManager);
 }

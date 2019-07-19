@@ -151,7 +151,13 @@ void Printer::reset()
 	m_executingCommand.clear();
 	m_temperatures.clear();
 
+	resetCommandQueue();
+}
+
+void Printer::resetCommandQueue()
+{
 	m_replyLines.clear();
+
 	while (!m_commandQueue.empty())
 	{
 		// m_replyLines is empty, which will indicate failure
@@ -266,17 +272,26 @@ void Printer::setState(State state)
 	{
 		BOOST_LOG_TRIVIAL(trace) << "State change on printer " << m_uniqueName << ": " << stateName(state);
 
+		if (state == State::Initializing || (state == State::Disconnected && m_state == State::Initializing))
+		{
+			std::lock_guard<std::mutex> lock(m_gcodeHistoryMutex);
+			m_gcodeHistory.clear();
+		}
+		if (state == State::Error)
+			resetCommandQueue();
+
 		m_state = state;
 		m_stateChangeSignal(state);
 	}
 }
 
-void Printer::sendCommand(const char* cmd, CommandCallback cb)
+void Printer::sendCommand(const char* cmd, CommandCallback cb, const std::string& gcodeTag)
 {
 	std::string cmdCopy(cmd);
+	std::string tagCopy(gcodeTag);
 
 	m_io.post([=]() {
-		m_commandQueue.push({ std::move(cmdCopy), cb });
+		m_commandQueue.push({ std::move(cmdCopy), std::move(tagCopy), cb });
 		doWrite();
 	});
 }
@@ -440,6 +455,16 @@ void Printer::readDone(const boost::system::error_code& ec)
 
 	m_replyLines.push_back(line);
 
+	{
+		GCodeEvent event;
+		event.commandId = m_nextCommandId;
+		event.outgoing = false;
+		event.data = line;
+		event.tag = m_executingTag;
+		
+		raiseGCodeEvent(event);
+	}
+
 	// This is the final line
 	if (boost::starts_with(line, "ok ") || line == "ok")
 	{
@@ -493,17 +518,35 @@ void Printer::readDone(const boost::system::error_code& ec)
 	}
 	else if (line == "start")
 	{
-		if (m_state == State::Connected)
+		m_replyLines.clear();
+		m_executingCommand.clear();
+
+		if (m_state == State::Connected || m_state == State::Error)
 		{
-			// Fail running print jobs
-			std::unique_lock<std::mutex> lock(m_printJobMutex);
-			if (m_printJob)
-				m_printJob->setError("Printer reset");
+			// The job should be failed already
+			if (m_state != State::Error)
+			{
+				// Fail running print jobs
+				std::unique_lock<std::mutex> lock(m_printJobMutex);
+				if (m_printJob)
+					m_printJob->setError("Printer reset");
+			}
 
 			// Reset line counter
 			m_nextLineNo = MAX_LINENO;
 			showStartupMessage();
 			doWrite();
+		}
+	}
+	else if (boost::starts_with(line, "Error:"))
+	{
+		if (m_state != State::Error)
+		{
+			setState(State::Error);
+
+			std::unique_lock<std::mutex> lock(m_printJobMutex);
+			if (m_printJob)
+				m_printJob->setError(line.c_str());
 		}
 	}
 
@@ -524,6 +567,7 @@ void Printer::doWrite()
 		return;
 
 	m_replyLines.clear();
+	m_executingTag.clear();
 
 	if (m_nextLineNo < MAX_LINENO)
 	{
@@ -554,6 +598,7 @@ void Printer::doWrite()
 		ss << '\n';
 
 		m_commandBuffer = ss.str();
+		m_executingTag = pc.tag;
 	}
 	else
 	{
@@ -564,6 +609,16 @@ void Printer::doWrite()
 	}
 
 	BOOST_LOG_TRIVIAL(debug) << "Write on printer " << m_uniqueName << ": " << m_commandBuffer.substr(0, m_commandBuffer.length()-1);
+
+	{
+		GCodeEvent event;
+		event.commandId = ++m_nextCommandId;
+		event.outgoing = true;
+		event.data = m_commandBuffer;
+		event.tag = m_executingTag;
+
+		raiseGCodeEvent(event);
+	}
 
 	boost::asio::async_write(m_serial, boost::asio::buffer(m_commandBuffer.c_str(), m_commandBuffer.length()),
 		std::bind(&Printer::writeDone, this, std::placeholders::_1));
@@ -727,4 +782,32 @@ void Printer::setPrintJob(std::shared_ptr<PrintJob> job)
 		lock.unlock();
 		m_hasJobChangeSignal(false);
 	}
+}
+
+std::list<Printer::GCodeEvent> Printer::gcodeHistory() const
+{
+	std::lock_guard<std::mutex> lock(m_gcodeHistoryMutex);
+	return m_gcodeHistory;
+}
+
+void Printer::raiseGCodeEvent(const GCodeEvent& e)
+{
+	std::lock_guard<std::mutex> lock(m_gcodeHistoryMutex);
+	if (m_gcodeHistory.size() >= MAX_GCODE_HISTORY)
+	{
+		auto first = m_gcodeHistory.front();
+		do
+		{
+			m_gcodeHistory.pop_front();
+		}
+		while (m_gcodeHistory.front().commandId == first.commandId);
+	}
+	m_gcodeHistory.push_back(e);
+	m_gcodeSignal(e);
+}
+
+void Printer::resetPrinter()
+{
+	if (m_state == State::Error)
+		sendCommand("M999", nullptr);
 }

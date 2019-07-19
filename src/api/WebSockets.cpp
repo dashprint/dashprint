@@ -82,13 +82,20 @@ private:
 							std::bind(&WSSubscriptionServer::printerTemperatureEvent, this, route[1], std::placeholders::_1)));
 						return;
 					}
-					else if (route[2] == "job") {
+					else if (route[2] == "job")
+					{
 						// Subscribe to hasJob signal
 						m_subscriptions.emplace(v, selfTrackingConnect(printer->hasPrintJobChangeSignal(),
 							std::bind(&WSSubscriptionServer::printerHasJobEvent, this, route[1], std::placeholders::_1)));
 						
 						// If it currently has a job, also subscribe to that PrintJob
 						doSubscribeJob(printer);
+						return;
+					}
+					else if (route[2] == "gcode")
+					{
+						m_subscriptions.emplace(v, selfTrackingConnect(printer->gcodeSignal(),
+							std::bind(&WSSubscriptionServer::printerGcodeEvent, this, route[1], std::placeholders::_1)));
 						return;
 					}
 				}
@@ -141,6 +148,19 @@ private:
 		nlohmann::json event;
 
 		event["event"]["Printer." + printer + ".temperature"] = changes;
+		raiseEvent(event);
+	}
+
+	void printerGcodeEvent(std::string printer, Printer::GCodeEvent gcode)
+	{
+		nlohmann::json event;
+
+		event["event"]["Printer." + printer + ".gcode"] = {
+			{ "commandId", gcode.commandId },
+			{ "outgoing", gcode.outgoing },
+			{ "data", gcode.data },
+			{ "tag", gcode.tag }
+		};
 		raiseEvent(event);
 	}
 

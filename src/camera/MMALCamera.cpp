@@ -222,7 +222,7 @@ void MMALCamera::setupConnection()
 
 void MMALCamera::encoderCallback(MMAL_BUFFER_HEADER_T* buffer)
 {
-	std::cout << "Encoder callback\n";
+	// std::cout << "Encoder callback\n";
 	MMAL_PORT_T* encoderOutputPort = m_encoder->output[0];
 
 	::mmal_buffer_header_mem_lock(buffer);
@@ -301,7 +301,7 @@ void MMALCamera::processNAL(std::basic_string_view<uint8_t> buffer)
 	{
 		std::unique_lock<std::mutex> l(m_cvMutex);
 
-		std::cout << "SPS from camera\n";
+		// std::cout << "SPS from camera\n";
 		// SPS
 		m_sps.assign(buffer.data(), buffer.data() + buffer.length());
 	}
@@ -316,7 +316,7 @@ void MMALCamera::processNAL(std::basic_string_view<uint8_t> buffer)
 		std::unique_lock<std::mutex> l(m_cvMutex);
 
 		// Enqueue this as a standard NAL
-		std::cout << "Writing " << buffer.length() << " into buf " << m_nextBuffer << std::endl;
+		// std::cout << "Writing " << buffer.length() << " into buf " << m_nextBuffer << std::endl;
 		m_buffers[m_nextBuffer].assign(buffer.data(), buffer.data() + buffer.length());
 		m_nextBuffer = (m_nextBuffer + 1) % std::size(m_buffers);
 	}
@@ -398,7 +398,7 @@ public:
 			int rd = std::min<int>(camera->m_buffers[m_next].size() - m_offset, bufSize);
 			std::memcpy(buf, camera->m_buffers[m_next].data() + m_offset, rd);
 			// m_dump.write((char*) buf, rd);
-			std::cout << "Delivering " << rd << " bytes from buf " << m_next << std::endl;
+			// std::cout << "Delivering " << rd << " bytes from buf " << m_next << std::endl;
 
 			if (m_offset + rd >= camera->m_buffers[m_next].size())
 			{

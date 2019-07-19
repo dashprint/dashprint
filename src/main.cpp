@@ -20,6 +20,7 @@
 #include "api/AuthApi.h"
 #include "api/AuthHelpers.h"
 #include "api/CameraApi.h"
+#include "api/FileApi.h"
 #include "AuthManager.h"
 #include "PluginManager.h"
 #include "CameraManager.h"
@@ -76,38 +77,10 @@ void runApp()
 	PluginManager pluginManager;
 	CameraManager cameraManager(g_config.get_child("cameras"));
 
-#if 0
-	std::shared_ptr<MMALCamera> camera = std::make_shared<MMALCamera>();
-	camera->start();
-
-	std::thread testThread([&]() {
-		std::ofstream dump;
-
-		auto fn = [&](const uint8_t* buf, int bufSize) -> int {
-			dump.write((char*) buf, bufSize);
-			return bufSize;
-		};
-
-		try
-		{
-			MP4SinkLambda target(fn);
-			std::shared_ptr<H264Source> source(camera->createSource());
-			MP4Streamer streamer(source, &target);
-
-			dump.open("/tmp/camera.mp4", std::ios_base::binary);
-
-			streamer.run();
-		}
-		catch (const std::exception& e)
-		{
-			BOOST_LOG_TRIVIAL(fatal) << "Camera/mp4 error: " << e.what();
-		}
-	});
-#endif
-
 	auto apiv1 = webServer.router("/api/v1/");
 	
-	routeRest(apiv1, fileManager, printerManager);
+	routePrinter(apiv1, fileManager, printerManager);
+	routeFile(apiv1, fileManager);
 	routeAuth(apiv1, authManager);
 	routeOctoprintRest(webServer.router("/api/")->addFilter(checkOctoprintKey(&authManager)), fileManager, printerManager, authManager);
 	routeWebSockets(webServer.router("/websocket"), fileManager, printerManager, authManager);

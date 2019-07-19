@@ -8,9 +8,6 @@ WebResponse::WebResponse(std::shared_ptr<WebSession> session)
 
 }
 
-// TODO: send() should invoke doRead() on WebSession
-// -> replacement for the loop in doRead()
-
 void WebResponse::send(http_status status, const std::map<std::string,std::string>& headers)
 {
 	boost::beast::http::response<boost::beast::http::empty_body> res{ status, m_session->m_request.version() };
@@ -70,8 +67,11 @@ bool WebResponse::sendChunk(const void* data, size_t length)
 
 void WebResponse::sendFinalChunk()
 {
-	boost::asio::write(m_session->socket(), boost::beast::http::make_chunk_last());
-	m_session->run();
+	boost::system::error_code ec;
+	boost::asio::write(m_session->socket(), boost::beast::http::make_chunk_last(), ec);
+	
+	if (!ec)
+		m_session->run();
 }
 
 void WebResponse::sendFile(const char* path, http_status status)

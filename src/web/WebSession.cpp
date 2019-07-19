@@ -32,6 +32,7 @@ WebSession::WebSession(WebServer* ws, boost::asio::ip::tcp::socket socket)
 
 WebSession::~WebSession()
 {
+	BOOST_LOG_TRIVIAL(trace) << "WebSession::~WebSession()";
 }
 
 void WebSession::run()
@@ -151,59 +152,6 @@ void WebSession::doRead()
 		}
 	}
 }
-
-bool WebSession::handleAuthentication()
-{
-	// TODO: Implement and use Bearer authentication
-#if 0
-	// Only URLs that require authentication are passed to this method
-	boost::beast::string_view authorization = m_requestParser->get()[boost::beast::http::field::authorization].to_string();
-
-	if (authorization.empty() || !boost::algorithm::starts_with(authorization, "Digest "))
-	{
-		sendWWWAuthenticate();
-		return false;
-	}
-
-	std::map<std::string,std::string> params;
-	parseAuthenticationKV(authorization.substr(7).to_string(), params);
-
-	// TODO: process parameters
-#endif
-
-	return true;
-}
-
-/*
-void WebSession::parseAuthenticationKV(std::string in, std::map<std::string,std::string>& out)
-{
-	boost::algorithm::trim(in);
-	std::vector<std::string> elems;
-
-	boost::split(elems, in, boost::is_any_of(","));
-
-	// Remove quotes, split as key=value
-	for (const std::string& kv : elems)
-	{
-		size_t pos = kv.find('=');
-		if (pos == std::string::npos)
-			continue;
-
-		std::string key = kv.substr(0, pos);
-		std::string value = kv.substr(pos+1);
-
-		if (boost::algorithm::starts_with(value, "\"") && boost::algorithm::ends_with(value, "\""))
-			value = value.substr(1, value.length()-2);
-
-		out[key] = value;
-	}
-}
-
-void WebSession::sendWWWAuthenticate()
-{
-	// TODO: send WWW-Authenticate
-}
-*/
 
 std::string WebSession::cachePath()
 {

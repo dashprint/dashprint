@@ -63,15 +63,14 @@ namespace
 	class RestMP4Sink : public MP4Sink
 	{
 	public:
-		RestMP4Sink(WebResponse& resp)
-		: m_resp(resp)
+		RestMP4Sink()
 		{
 		}
 
 		int write(const uint8_t* buf, int bufSize) override
 		{
-			BOOST_LOG_TRIVIAL(trace) << "Sending a chunk of " << bufSize << " bytes";
-			if (!m_resp.sendChunk(buf, bufSize))
+			// BOOST_LOG_TRIVIAL(trace) << "Sending a chunk of " << bufSize << " bytes";
+			if (!m_resp->sendChunk(buf, bufSize))
 			{
 				BOOST_LOG_TRIVIAL(warning) << "Failed to send the chunk";
 				m_streamer->stop();
@@ -84,8 +83,13 @@ namespace
 		{
 			m_streamer = streamer;
 		}
+
+		void setWebResponse(WebResponse* webResponse)
+		{
+			m_resp = webResponse;
+		}
 	private:
-		WebResponse& m_resp;
+		WebResponse* m_resp;
 		MP4Streamer* m_streamer;
 	};
 
@@ -108,11 +112,11 @@ namespace
 		}
 
 		auto cameraId = req.pathParam(1);
-		RestMP4Sink sink(resp);
+		std::shared_ptr<RestMP4Sink> sink = std::make_shared<RestMP4Sink>();
 		std::shared_ptr<MP4Streamer> streamer;
 
-		streamer.reset(cameraManager->createStreamer(cameraId, &sink));
-		sink.setStreamer(streamer.get());
+		streamer.reset(cameraManager->createStreamer(cameraId, sink.get()));
+		sink->setStreamer(streamer.get());
 
 		if (streamer)
 		{
@@ -126,6 +130,7 @@ namespace
 			std::thread thread([=]() mutable {
 				try
 				{
+					sink->setWebResponse(&resp);
 					streamer->run();
 				}
 				catch (const std::exception& e)
