@@ -43,13 +43,14 @@ public:
 	const std::string& queryString() const { return m_queryString; }
 
 	const char* queryParam(const char* name);
+
+	static std::string urlDecode(std::string_view in);
 protected:
 	boost::asio::ip::tcp::socket&& socket();
 	boost::cmatch& matches() { return m_matches; }
 private:
 	void parseQueryString(const std::string& qs);
 	void parseQueryStringKV(std::string_view sv);
-	static std::string urlDecode(std::string_view in);
 private:
 	const boost::beast::http::request<boost::beast::http::string_body>& m_request;
 	const std::string& m_requestFile;

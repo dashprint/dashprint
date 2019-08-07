@@ -73,7 +73,7 @@ if (WITH_TESTS)
 
     ##############
 
-    add_executable(MultipartTest test/MultipartTest.cpp src/MultipartFormData.cpp)
+    add_executable(MultipartTest test/MultipartTest.cpp src/web/MultipartFormData.cpp)
     target_link_libraries(MultipartTest ${LINK_LIBRARIES})
 
     add_test(MultipartTest MultipartTest)

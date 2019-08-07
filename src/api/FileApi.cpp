@@ -24,7 +24,7 @@ namespace
 
 	void restDeleteFile(WebRequest& req, WebResponse& resp, FileManager* fileManager)
 	{
-		std::string name = req.pathParam(1);
+		std::string name = WebRequest::urlDecode(req.pathParam(1));
 		std::string path = fileManager->getFilePath(name.c_str());
 
 		if (!boost::filesystem::is_regular_file(path))
@@ -38,7 +38,7 @@ namespace
 
 	void restUploadFile(WebRequest& req, WebResponse& resp, FileManager* fileManager)
 	{
-		std::string name = req.pathParam(1);
+		std::string name = WebRequest::urlDecode(req.pathParam(1));
 		
 		if (req.hasRequestFile())
 			name = fileManager->saveFile(name.c_str(), req.requestFile().c_str());
@@ -52,7 +52,7 @@ namespace
 
 	void restDownloadFile(WebRequest& req, WebResponse& resp, FileManager* fileManager)
 	{
-		std::string name = req.pathParam(1);
+		std::string name = WebRequest::urlDecode(req.pathParam(1));
 		std::string path = fileManager->getFilePath(name.c_str());
 
 		resp.sendFile(path.c_str());

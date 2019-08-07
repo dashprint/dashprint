@@ -25,7 +25,7 @@ namespace
 		mp->parse([&](const MultipartFormData::Headers_t& headers, const char* name, const void* data, uint64_t length) {
 			if (std::strcmp(name, "print") == 0)
 			{
-				if (length == 4 && std::memcmp(data, "true", 4) == 0)
+				if (length >= 4 && std::memcmp(data, "true", 4) == 0)
 					print = true;
 			}
 			else if (std::strcmp(name, "file") == 0)
@@ -52,17 +52,19 @@ namespace
 		if (!fileData || fileName.empty())
 			throw WebErrors::bad_request("missing fields");
 
-		std::string filePath = fileManager->saveFile(fileName.c_str(), fileData, fileSize);
+		std::string finalFileName = fileManager->saveFile(fileName.c_str(), fileData, fileSize);
+		std::string filePath = fileManager->getFilePath(finalFileName);
 
 		if (print)
 		{
 			std::string defaultPrinter = printerManager->defaultPrinter();
 			std::shared_ptr<Printer> printer = printerManager->printer(defaultPrinter);
 
-			if (printer && !printer->hasPrintJob())
+			if (printer && (!printer->hasPrintJob() || !printer->printJob()->inProgress()))
 			{
-				auto printJob = std::make_shared<PrintJob>(printer, fileName, filePath.c_str());
+				auto printJob = std::make_shared<PrintJob>(printer, finalFileName, filePath.c_str());
 				printer->setPrintJob(printJob);
+				printJob->start();
 			}
 		}
 
@@ -70,13 +72,13 @@ namespace
 		result["done"] = true;
 
 		nlohmann::json local = nlohmann::json::object();
-		local["name"] = fileName;
+		local["name"] = finalFileName;
 		local["origin"] = "local";
-		local["path"] = fileName;
+		local["path"] = finalFileName;
 
 		nlohmann::json refs = {
-			"download", req.baseUrl() + "/api/v1/files/" + fileName,
-			"resource", req.baseUrl() + "/api/files/local/" + fileName
+			"download", req.baseUrl() + "/api/v1/files/" + finalFileName,
+			"resource", req.baseUrl() + "/api/files/local/" + finalFileName
 		};
 
 		local["refs"] = refs;

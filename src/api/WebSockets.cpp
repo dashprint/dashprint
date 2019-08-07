@@ -58,6 +58,8 @@ private:
 
 			boost::split(route, v, boost::is_any_of("."));
 
+			BOOST_LOG_TRIVIAL(debug) << "WS - Subscribing to " << v;
+
 			if (route[0] == "PrinterManager")
 			{
 				m_subscriptions.emplace(v, selfTrackingConnect(m_printerManager.printerListChangeSignal(),

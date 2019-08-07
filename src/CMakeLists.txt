@@ -47,6 +47,9 @@ set(dashprint_sources
     Plugin.cpp
     mp4/MP4Streamer.cpp
     camera/Camera.cpp
+    camera/V4L2GenericCamera.cpp
+    camera/V4L2RawCamera.cpp
+    camera/V4L2H264Camera.cpp
     CameraManager.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp
 )

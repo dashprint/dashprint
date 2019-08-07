@@ -35,6 +35,7 @@ public:
 	std::string errorString() const;
 	void progress(size_t& pos, size_t& total) const;
 	const std::string& name() const { return m_jobName; }
+	inline bool inProgress() const { return m_state == State::Running || m_state == State::Paused; }
 
 	std::chrono::seconds timeElapsed() const;
 

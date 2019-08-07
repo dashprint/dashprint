@@ -19,14 +19,20 @@ MultipartFormData::MultipartFormData(const char* filename, const char* boundary)
 	}
 
 	if (boundary)
-		m_boundary = boundary;
+	{
+		m_boundary = "--";
+		m_boundary += boundary;
+	}
 }
 
 MultipartFormData::MultipartFormData(const std::string* contents, const char* boundary)
 : m_contents(contents)
 {
 	if (boundary)
-		m_boundary = boundary;
+	{
+		m_boundary = "--";
+		m_boundary += boundary;
+	}
 }
 
 MultipartFormData::~MultipartFormData()
@@ -99,6 +105,7 @@ void MultipartFormData::parse(FieldHandler_t handler)
 			contentSection = false;
 		}
 
+		const char* bdr = boundary.c_str();
 		const char* end = static_cast<const char*>(::memmem(data() + pos, length() - pos, boundary.c_str(), boundary.length()));
 		if (!end || end-data() >= length()-2)
 		{

@@ -3,3 +3,9 @@ TODO: everything. This file serves mainly as a reminder.
 * C++ WASM: https://github.com/PetterS/clang-wasm
 * ECMAScript engine Duktape: https://duktape.org/
 
+FIXED: Gcode files with spaces cannot be downloaded.
+FIXED: Gcode preview fails to report such an error.
+FIXED: A gcode command with too many reply lines triggeres complete erasure in gcode traffic view.
+Gcode upload from Slic3r does not reload the file manager card.
+maybe FIXED: Gcode traffic always scrolls down on incoming lines.
+Support reading remaining time from gcode: https://community.octoprint.org/t/setting-octoprints-remaining-time-via-slic3r-pe-1-40s-m73-gcode/4038
