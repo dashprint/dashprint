@@ -42,7 +42,7 @@ public:
 	boost::signals2::signal<void(State, std::string)>& stateChangeSignal() { return m_stateChangeSignal; }
 	boost::signals2::signal<void(size_t)>& progressChangeSignal() { return m_progressChangeSignal; }
 protected:
-	void setError(const char* error);
+	void setError(std::string_view error);
 private:
 	void printLine();
 	void lineProcessed(const std::vector<std::string>& resp);

@@ -24,6 +24,7 @@
 #include <mutex>
 #include <list>
 #include <chrono>
+#include <list>
 
 class PrintJob;
 
@@ -153,6 +154,9 @@ private:
 	void showStartupMessage();
 	void raiseGCodeEvent(const GCodeEvent& e);
 	void resetCommandQueue();
+
+	void handleResend(int resendLine);
+	void raiseError(std::string_view message);
 private:
 	std::string m_uniqueName; // As used in REST API URLs
 	std::string m_devicePath, m_name;
@@ -198,6 +202,9 @@ private:
 	mutable std::mutex m_gcodeHistoryMutex;
 	static const size_t MAX_GCODE_HISTORY = 100; // max line count
 	std::list<GCodeEvent> m_gcodeHistory;
+
+	static const size_t MAX_RESEND_HISTORY = 10;
+	std::list<std::tuple<int, std::string>> m_resendHistory;
 };
 
 #endif /* PRINTER_H */

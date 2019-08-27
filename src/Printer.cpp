@@ -495,17 +495,9 @@ void Printer::readDone(const boost::system::error_code& ec)
 		{
 			m_nextLineNo = 1;
 		}
-		// If the resend is issued for a line we don't have, pass the error on to the requester
-		else if (resendLine != m_nextLineNo-1)
-		{
-			if (!m_commandQueue.empty())
-			{
-				auto cb = m_commandQueue.front().callback;
-				if (cb)
-					cb(m_replyLines);
-				m_commandQueue.pop();
-			}
-		}
+
+		if (resendLine != -1)
+			handleResend(resendLine);
 
 		m_replyLines.clear();
 		m_executingCommand.clear();
@@ -540,17 +532,58 @@ void Printer::readDone(const boost::system::error_code& ec)
 	}
 	else if (boost::starts_with(line, "Error:"))
 	{
-		if (m_state != State::Error)
-		{
-			setState(State::Error);
-
-			std::unique_lock<std::mutex> lock(m_printJobMutex);
-			if (m_printJob)
-				m_printJob->setError(line.c_str());
-		}
+		raiseError(std::string_view(line).substr(6));
 	}
 
 	doRead();
+}
+
+void Printer::raiseError(std::string_view message)
+{
+	if (m_state != State::Error)
+	{
+		setState(State::Error);
+
+		std::unique_lock<std::mutex> lock(m_printJobMutex);
+		if (m_printJob)
+			m_printJob->setError(message);
+	}
+}
+
+void Printer::handleResend(int resendLine)
+{
+	auto resendStart = m_resendHistory.end();
+	for (auto it = m_resendHistory.begin(); it != m_resendHistory.end(); it++)
+	{
+		if (std::get<0>(*it) == resendLine)
+		{
+			resendStart = it;
+			break;
+		}
+	}
+
+	if (resendStart == m_resendHistory.end())
+	{
+		raiseError("Insufficient line history for resend");
+	}
+	else
+	{
+		auto queueCopy = m_commandQueue;
+		auto it = resendStart;
+
+		m_commandQueue = std::queue<PendingCommand>();
+
+		for (auto it = resendStart; it != m_resendHistory.end(); it++)
+			m_commandQueue.push({ std::get<1>(*it), std::string(), nullptr });
+		while (!queueCopy.empty())
+		{
+			m_commandQueue.push(queueCopy.front());
+			queueCopy.pop();
+		}
+
+		m_resendHistory.erase(resendStart, m_resendHistory.end());
+		m_nextLineNo = resendLine;
+	}
 }
 
 static std::string extractCommandCode(const std::string& cmd)
@@ -581,6 +614,10 @@ void Printer::doWrite()
 		const bool useLineNumber = m_executingCommand != "M110";
 		if (useLineNumber)
 		{
+			m_resendHistory.push_back({ m_nextLineNo, pc.command });
+			if (m_resendHistory.size() > MAX_RESEND_HISTORY)
+				m_resendHistory.pop_front();
+
 			// Prepend next line number
 			ss << 'N' << m_nextLineNo++ << ' ';
 		}

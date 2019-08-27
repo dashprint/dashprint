@@ -64,7 +64,7 @@ void PrintJob::pause()
 	// TODO: pause sequence (move extruder away)
 }
 
-void PrintJob::setError(const char* error)
+void PrintJob::setError(std::string_view error)
 {
 	BOOST_LOG_TRIVIAL(error) << "Print job error on " << m_printerUniqueName << ": "
 							 << error;
