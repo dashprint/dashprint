@@ -498,6 +498,16 @@ void Printer::readDone(const boost::system::error_code& ec)
 
 		if (resendLine != -1)
 			handleResend(resendLine);
+		else
+		{
+			if (!m_commandQueue.empty())
+			{
+				auto cb = m_commandQueue.front().callback;
+				if (cb)
+					cb(m_replyLines);
+				m_commandQueue.pop();
+			}
+		}
 
 		m_replyLines.clear();
 		m_executingCommand.clear();
