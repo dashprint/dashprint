@@ -65,6 +65,8 @@ private:
 	std::chrono::steady_clock::time_point m_startTime;
 	std::chrono::seconds m_timeElapsed;
 
+	Printer::PositioningState m_positioningBeforePause;
+
 	friend class Printer;
 };
 

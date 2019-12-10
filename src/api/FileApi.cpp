@@ -25,12 +25,7 @@ namespace
 	void restDeleteFile(WebRequest& req, WebResponse& resp, FileManager* fileManager)
 	{
 		std::string name = WebRequest::urlDecode(req.pathParam(1));
-		std::string path = fileManager->getFilePath(name.c_str());
-
-		if (!boost::filesystem::is_regular_file(path))
-			throw WebErrors::not_found(".gcode file not found");
-		
-		if (!boost::filesystem::remove(path))
+		if (!fileManager->deleteFile(name.c_str()))
 			throw WebErrors::not_found("Cannot delete file");
 		
 		resp.send(WebResponse::http_status::no_content);

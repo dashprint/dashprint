@@ -36,6 +36,7 @@ std::string FileManager::saveFile(std::string_view name, const void* contents, s
 	if (file.bad())
 		throw std::runtime_error("Cannot write file");
 
+	m_fileListChangedSignal();
 	return safeName;
 }
 
@@ -81,3 +82,16 @@ std::vector<FileManager::FileInfo> FileManager::listFiles()
 	return rv;
 }
 
+bool FileManager::deleteFile(std::string_view name)
+{
+	auto path = getFilePath(name);
+
+	if (!boost::filesystem::is_regular_file(path))
+		return false;
+	
+	if (!boost::filesystem::remove(path))
+		return false;
+	
+	m_fileListChangedSignal();
+	return true;
+}

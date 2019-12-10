@@ -124,11 +124,22 @@ public:
 
 	// Parse 'key:some value' pairs
 	static void kvParse(const std::string& line, std::map<std::string,std::string>& values);
+
+	struct PositioningState
+	{
+		bool relativePositioning;
+		bool extruderRelativePositioning;
+	};
+	PositioningState positioningState() const { return m_positioningState; }
+
+	std::string errorMessage() const;
 private:
 	void setState(State state);
 
 	void deviceSettingsChanged();
 	void doConnect();
+	void connected();
+	void setupReconnect();
 
 	void doRead();
 	void readDone(const boost::system::error_code& ec);
@@ -157,13 +168,20 @@ private:
 
 	void handleResend(int resendLine);
 	void raiseError(std::string_view message);
+	void workaroundOverconfirmationBug(std::istream& is);
+
+	bool useLineNumberForExecutingCommand() const;
 private:
 	std::string m_uniqueName; // As used in REST API URLs
 	std::string m_devicePath, m_name;
 	int m_baudRate = 115200;
 	State m_state = State::Stopped;
 	boost::asio::io_service& m_io;
+
 	boost::asio::serial_port m_serial;
+	boost::asio::ip::tcp::socket m_socket;
+	bool m_usingSocket;
+
 	boost::asio::deadline_timer m_reconnectTimer, m_timeoutTimer, m_temperatureTimer;
 
 	struct PendingCommand
@@ -203,8 +221,13 @@ private:
 	static const size_t MAX_GCODE_HISTORY = 100; // max line count
 	std::list<GCodeEvent> m_gcodeHistory;
 
-	static const size_t MAX_RESEND_HISTORY = 10;
+	static const size_t MAX_RESEND_HISTORY = 50;
 	std::list<std::tuple<int, std::string>> m_resendHistory;
+
+	PositioningState m_positioningState = { false, false };
+
+	mutable std::mutex m_miscMutex;
+	std::string m_errorMessage;
 };
 
 #endif /* PRINTER_H */

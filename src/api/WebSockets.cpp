@@ -102,6 +102,15 @@ private:
 					}
 				}
 			}
+			else if (route[0] == "FileManager" && route.size() >= 2)
+			{
+				if (route[1] == "change")
+				{
+					m_subscriptions.emplace(v, selfTrackingConnect(m_fileManager.fileListChangedSignal(),
+						std::bind(&WSSubscriptionServer::fileManagerEvent, this)));
+					return;
+				}
+			}
 
 			BOOST_LOG_TRIVIAL(warning) << "Subscription " << v << " not handled";
 		}
@@ -133,14 +142,24 @@ private:
 		raiseEvent(event);
 	}
 
-	void printerStateEvent(std::string printer, Printer::State state)
+	void printerStateEvent(std::string printerId, Printer::State state)
 	{
-		nlohmann::json event;
+		nlohmann::json event, eventData;
 
-		event["event"]["Printer." + printer + ".state"] = {
+		eventData = {
 				{"connected", state == Printer::State::Connected},
-				{"stopped", state == Printer::State::Stopped}
+				{"stopped", state == Printer::State::Stopped},
+				{"state", Printer::stateName(state)}
 		};
+
+		std::shared_ptr<Printer> printer = m_printerManager.printer(printerId.c_str());
+		if (printer)
+		{
+			eventData["errorMessage"] = printer->errorMessage();
+			printer.reset();
+		}
+
+		event["event"]["Printer." + printerId + ".state"] = eventData;
 
 		raiseEvent(event);
 	}
@@ -238,6 +257,13 @@ private:
 			{ "elapsed", job->timeElapsed().count() }
 		};
 
+		raiseEvent(event);
+	}
+
+	void fileManagerEvent()
+	{
+		nlohmann::json event;
+		event["event"]["FileManager.change"] = nlohmann::json::object();
 		raiseEvent(event);
 	}
 

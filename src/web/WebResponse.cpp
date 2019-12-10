@@ -1,6 +1,7 @@
 #include "WebResponse.h"
 #include "WebServer.h"
 #include <boost/beast/http/chunk_encode.hpp>
+#include <boost/log/trivial.hpp>
 
 WebResponse::WebResponse(std::shared_ptr<WebSession> session)
 : m_session(session)
@@ -62,6 +63,10 @@ bool WebResponse::sendChunk(const void* data, size_t length)
 {
 	boost::system::error_code ec;
 	boost::asio::write(m_session->socket(), boost::beast::http::make_chunk(boost::asio::buffer(static_cast<const char*>(data), length)), ec);
+	if (ec)
+	{
+		BOOST_LOG_TRIVIAL(warning) << "WebResponse::sendChunk(): failure: " << ec.message();
+	}
 	return !ec;
 }
 

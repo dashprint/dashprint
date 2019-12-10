@@ -28,6 +28,28 @@ void PrintJob::start()
 		m_timeElapsed = std::chrono::seconds::zero();
 		m_file.seekg(0, std::ios_base::beg);
 	}
+	else
+	{
+		std::shared_ptr<Printer> printer = m_printer.lock();
+
+		if (printer)
+		{
+			// Move the extruder back
+			printer->sendCommand("G0 Z-5", nullptr);
+
+			// Restore the original positioning mode
+			if (!m_positioningBeforePause.relativePositioning)
+			{
+				printer->sendCommand("G90", nullptr);
+				if (m_positioningBeforePause.extruderRelativePositioning)
+					printer->sendCommand("M83", nullptr);
+			}
+			else if (!m_positioningBeforePause.extruderRelativePositioning)
+				printer->sendCommand("M82", nullptr);
+
+			printer->sendCommand("M117 Job resumed", nullptr);
+		}
+	}
 
 	setState(State::Running);
 	m_startTime = std::chrono::steady_clock::now();
@@ -51,17 +73,31 @@ void PrintJob::stop()
 		printer->sendCommand("M104 S0", nullptr);
 		// Heatbed off
 		printer->sendCommand("M140 S0", nullptr);
-	}
 
-	// TODO: Move extruder away?
+		// Move the extruder away
+		printer->sendCommand("G91", nullptr); // relative movements
+		printer->sendCommand("G0 Z10", nullptr); // up 1cm
+	}
 }
 
 void PrintJob::pause()
 {
+	if (m_state != State::Running)
+		return;
+
 	m_timeElapsed += std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - m_startTime);
 
 	setState(State::Paused);
-	// TODO: pause sequence (move extruder away)
+
+	std::shared_ptr<Printer> printer = m_printer.lock();
+	m_positioningBeforePause = printer->positioningState();
+
+	// Pause sequence (move extruder away)
+	if (!m_positioningBeforePause.relativePositioning)
+		printer->sendCommand("G91", nullptr);
+	printer->sendCommand("G0 Z5", nullptr);
+
+	printer->sendCommand("M117 Job paused", nullptr);
 }
 
 void PrintJob::setError(std::string_view error)
@@ -135,17 +171,6 @@ void PrintJob::lineProcessed(const std::vector<std::string>& resp)
 {
 	try
 	{
-		if (resp.empty())
-			throw std::runtime_error("Printer gone");
-
-		for (const std::string &line : resp)
-		{
-			if (boost::starts_with(line, "Error:"))
-				throw std::runtime_error(line.substr(6));
-			else if (boost::starts_with(line, "Resend:"))
-				throw std::runtime_error("Invalid line number requested. Have you reset the printer?");
-		}
-
 		m_progressChangeSignal(m_position);
 
 		if (m_state == State::Running)
@@ -187,6 +212,8 @@ const char* PrintJob::stateString(State state)
 			return "Running";
 		case State::Done:
 			return "Done";
+		case State::Paused:
+			return "Paused";
 		case State::Error:
 		default:
 			return "Error";

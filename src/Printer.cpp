@@ -30,7 +30,7 @@ static constexpr int DATA_TIMEOUT = 5000;
 static constexpr int MAX_LINENO = 10000;
 
 Printer::Printer(boost::asio::io_service &io)
-		: m_io(io), m_serial(io), m_reconnectTimer(io), m_timeoutTimer(io), m_temperatureTimer(io)
+		: m_io(io), m_serial(io), m_socket(io), m_reconnectTimer(io), m_timeoutTimer(io), m_temperatureTimer(io)
 {
 }
 
@@ -146,6 +146,10 @@ void Printer::reset()
 
 	m_serial.cancel(ec);
 	m_serial.close(ec);
+
+	m_socket.cancel(ec);
+	m_socket.close(ec);
+
 	m_reconnectTimer.cancel(ec);
 	m_timeoutTimer.cancel(ec);
 	m_executingCommand.clear();
@@ -280,6 +284,9 @@ void Printer::setState(State state)
 		if (state == State::Error)
 			resetCommandQueue();
 
+		if (state == State::Connected)
+			m_errorMessage.clear();
+
 		m_state = state;
 		m_stateChangeSignal(state);
 	}
@@ -303,71 +310,127 @@ void Printer::doConnect()
 
 	try
 	{
-		BOOST_LOG_TRIVIAL(debug) << "Opening serial port " << m_devicePath;
+		if (!boost::starts_with(m_devicePath, "tcp:"))
+		{
+			m_usingSocket = false;
+			BOOST_LOG_TRIVIAL(debug) << "Opening serial port " << m_devicePath;
 
-		m_serial.open(m_devicePath.c_str());
+			m_serial.open(m_devicePath.c_str());
 
-		::ioctl(m_serial.native_handle(), TIOCEXCL);
-		setNoResetOnReopen();
+			::ioctl(m_serial.native_handle(), TIOCEXCL);
+			setNoResetOnReopen();
 
-		m_serial.set_option(boost::asio::serial_port_base::baud_rate(m_baudRate));
-		m_serial.set_option(boost::asio::serial_port_base::character_size(8));
-		m_serial.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
-		m_serial.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
-		m_serial.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
+			m_serial.set_option(boost::asio::serial_port_base::baud_rate(m_baudRate));
+			m_serial.set_option(boost::asio::serial_port_base::character_size(8));
+			m_serial.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
+			m_serial.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::none));
+			m_serial.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
 
-		setState(State::Initializing);
-		doRead();
+			connected();
+		}
+		else
+		{
+			auto lpos = m_devicePath.rfind(':');
+			if (lpos == 3)
+			{
+				BOOST_LOG_TRIVIAL(error) << "Invalid address: " << m_devicePath;
+				return;
+			}
 
-		// Initial value
-		m_lastIncomingData = std::chrono::steady_clock::now();
-		setupTimeoutCheck();
+			std::string address = m_devicePath.substr(4, lpos-4);
+			int port = atoi(m_devicePath.c_str() + lpos + 1);
 
-		m_reconnectTimer.expires_from_now(boost::posix_time::seconds(1));
-		m_reconnectTimer.async_wait([=](const boost::system::error_code& ec) {
-			// This is a workaround that helps get rid of trash in the input buffer,
-			// but so far things work OK without it.
-			// ::usleep(10000);
-			// ::tcflush(m_serial.native_handle(), TCIOFLUSH);
+			m_usingSocket = true;
+			boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::address::from_string(address), port);
 
-			// Issue a 'sleep for 0ms' to stabilize communications.
-			// Based on trial-error, it seems to be necessary to do a useless command first after opening the port
-			// (USB TTL hardware tends to be quite shoddy), before issuing commands whose results we actually make use of.
-			// sendCommand("G4 P0", nullptr);
-			sendCommand("M110 N0", nullptr);
-			m_nextLineNo = 1;
+			BOOST_LOG_TRIVIAL(debug) << "Opening TCP connection to " << endpoint;
 
-			// Get printer information
-			sendCommand("M115", [=](const std::vector<std::string>& reply) {
-				if (reply.size() >= 2)
+			m_socket.async_connect(endpoint, [=](boost::system::error_code ec) {
+				boost::system::error_code dummy;
+				m_timeoutTimer.cancel(dummy);
+
+				if (ec)
 				{
-					kvParse(reply[reply.size() - 2], m_baseParameters);
-					for (auto it = m_baseParameters.begin(); it != m_baseParameters.end(); it++)
-						std::cout << it->first << " -> " << it->second << std::endl;
+					BOOST_LOG_TRIVIAL(error) << "Failed to connect: " << ec.message();
+					setupReconnect();
 				}
-
-				if (!reply.empty())
-				{
-					setState(State::Connected);
-					showStartupMessage();
-					getTemperature();
-				}
+				else
+					connected();
 			});
 
-			doWrite();
-		});
+			m_timeoutTimer.expires_from_now(boost::posix_time::seconds(5));
+			m_timeoutTimer.async_wait([=](boost::system::error_code ec) {
+				if (!ec)
+				{
+					BOOST_LOG_TRIVIAL(error) << "TCP connection timeout";
+
+					m_socket.cancel(ec);
+					setupReconnect();
+				}
+			});
+		}
 	}
 	catch (const std::exception &e)
 	{
-		BOOST_LOG_TRIVIAL(error) << "Failed to open serial port " << m_devicePath;
+		BOOST_LOG_TRIVIAL(error) << "Failed to open printer port " << m_devicePath << ": " << e.what();
 
-		// Retry in a short while
-		m_reconnectTimer.expires_from_now(RECONNECT_DELAY);
-		m_reconnectTimer.async_wait([=](const boost::system::error_code& ec) {
-			if (!ec)
-				doConnect();
-		});
+		setupReconnect();
 	}
+}
+
+void Printer::setupReconnect()
+{
+	// Retry in a short while
+	m_reconnectTimer.expires_from_now(RECONNECT_DELAY);
+	m_reconnectTimer.async_wait([=](const boost::system::error_code& ec) {
+		if (!ec)
+			doConnect();
+	});
+}
+
+void Printer::connected()
+{
+	setState(State::Initializing);
+	doRead();
+
+	// Initial value
+	m_lastIncomingData = std::chrono::steady_clock::now();
+	setupTimeoutCheck();
+
+	m_reconnectTimer.expires_from_now(boost::posix_time::seconds(1));
+	m_reconnectTimer.async_wait([=](const boost::system::error_code& ec) {
+		// This is a workaround that helps get rid of trash in the input buffer,
+		// but so far things work OK without it.
+		// ::usleep(10000);
+		// ::tcflush(m_serial.native_handle(), TCIOFLUSH);
+
+		// Issue a 'sleep for 0ms' to stabilize communications.
+		// Based on trial-error, it seems to be necessary to do a useless command first after opening the port
+		// (USB TTL hardware tends to be quite shoddy), before issuing commands whose results we actually make use of.
+		// sendCommand("G4 P0", nullptr);
+		sendCommand("M110 N0", nullptr);
+		m_nextLineNo = 1;
+
+		// Get printer information
+		sendCommand("M115", [=](const std::vector<std::string>& reply) {
+			if (reply.size() >= 2)
+			{
+				kvParse(reply[reply.size() - 2], m_baseParameters);
+				for (auto it = m_baseParameters.begin(); it != m_baseParameters.end(); it++)
+					std::cout << it->first << " -> " << it->second << std::endl;
+			}
+
+			if (!reply.empty())
+			{
+				setState(State::Connected);
+				showStartupMessage();
+				getTemperature();
+			}
+		});
+
+		doWrite();
+	});
+	
 }
 
 void Printer::showStartupMessage()
@@ -422,7 +485,7 @@ void Printer::ioError(const boost::system::error_code& ec)
 {
 	if (ec != boost::system::errc::operation_canceled)
 	{
-		BOOST_LOG_TRIVIAL(error) << "I/O error on printer " << m_uniqueName << ": " << ec << std::endl;
+		BOOST_LOG_TRIVIAL(error) << "I/O error on printer " << m_uniqueName << ": " << ec.message() << std::endl;
 
 		setState(State::Disconnected);
 		reset();
@@ -432,8 +495,16 @@ void Printer::ioError(const boost::system::error_code& ec)
 
 void Printer::doRead()
 {
-	boost::asio::async_read_until(m_serial, m_streamBuf, '\n',
-		std::bind(&Printer::readDone, this, std::placeholders::_1));
+	if (!m_usingSocket)
+	{
+		boost::asio::async_read_until(m_serial, m_streamBuf, '\n',
+			std::bind(&Printer::readDone, this, std::placeholders::_1));
+	}
+	else
+	{
+		boost::asio::async_read_until(m_socket, m_streamBuf, '\n',
+			std::bind(&Printer::readDone, this, std::placeholders::_1));
+	}
 }
 
 static std::istream& safeGetline(std::istream& is, std::string& t)
@@ -469,6 +540,21 @@ static std::istream& safeGetline(std::istream& is, std::string& t)
     }
 }
 
+void Printer::workaroundOverconfirmationBug(std::istream& is)
+{
+	if (m_streamBuf.size() > 0)
+	{
+		while (!is.bad() && !is.eof() && !is.fail())
+		{
+			std::string l;
+			safeGetline(is, l);
+
+			if (!l.empty())
+				m_replyLines.push_back(l);
+		}
+	}
+}
+
 void Printer::readDone(const boost::system::error_code& ec)
 {
 	if (ec)
@@ -501,6 +587,8 @@ void Printer::readDone(const boost::system::error_code& ec)
 	// This is the final line
 	if (boost::starts_with(line, "ok ") || line == "ok")
 	{
+		workaroundOverconfirmationBug(is);
+
 		// Handle command re-sending
 		int resendLine = -1;
 		for (const std::string& line : m_replyLines)
@@ -531,7 +619,11 @@ void Printer::readDone(const boost::system::error_code& ec)
 		else
 		{
 			if (resendLine != -1)
+			{
+				BOOST_LOG_TRIVIAL(warning) << "Handling resend for line " << resendLine;
+					
 				handleResend(resendLine);
+			}
 			else
 			{
 				if (!m_commandQueue.empty())
@@ -585,14 +677,28 @@ void Printer::readDone(const boost::system::error_code& ec)
 
 void Printer::raiseError(std::string_view message)
 {
+	BOOST_LOG_TRIVIAL(error) << "Error on printer " << m_uniqueName << ": " << message;
+	resetCommandQueue();
+
 	if (m_state != State::Error)
 	{
+		{
+			std::unique_lock<std::mutex> lock(m_miscMutex);
+			m_errorMessage = message;
+		}
+
 		setState(State::Error);
 
 		std::unique_lock<std::mutex> lock(m_printJobMutex);
 		if (m_printJob)
 			m_printJob->setError(message);
 	}
+}
+
+std::string Printer::errorMessage() const
+{
+	std::unique_lock<std::mutex> lock(m_miscMutex);
+	return m_errorMessage;
 }
 
 void Printer::handleResend(int resendLine)
@@ -618,7 +724,9 @@ void Printer::handleResend(int resendLine)
 
 		m_commandQueue = std::queue<PendingCommand>();
 
-		for (auto it = resendStart; it != m_resendHistory.end(); it++)
+		// Omit the last item in resend history, because it is now in queueCopy
+		auto end = --m_resendHistory.end();
+		for (auto it = resendStart; it != end; it++)
 			m_commandQueue.push({ std::get<1>(*it), std::string(), nullptr });
 		while (!queueCopy.empty())
 		{
@@ -628,6 +736,8 @@ void Printer::handleResend(int resendLine)
 
 		m_resendHistory.erase(resendStart, m_resendHistory.end());
 		m_nextLineNo = resendLine;
+
+		BOOST_LOG_TRIVIAL(debug) << "Queue size after resend handling: " << m_commandQueue.size();
 	}
 }
 
@@ -637,6 +747,19 @@ static std::string extractCommandCode(const std::string& cmd)
 	if (pos != std::string::npos)
 		return cmd.substr(0, pos);
 	return cmd;
+}
+
+bool Printer::useLineNumberForExecutingCommand() const
+{
+	// Omit for the line-setting command
+	if (m_executingCommand == "M110")
+		return false;
+
+	// Omit for printer reset
+	if (m_executingCommand == "M999")
+		return false;
+	
+	return true;
 }
 
 void Printer::doWrite()
@@ -655,8 +778,7 @@ void Printer::doWrite()
 		m_executingCommand = extractCommandCode(pc.command);
 		processCommandEffects(pc.command);
 
-		// If this is not a line-setting command
-		const bool useLineNumber = m_executingCommand != "M110";
+		const bool useLineNumber = useLineNumberForExecutingCommand();
 		if (useLineNumber)
 		{
 			m_resendHistory.push_back({ m_nextLineNo, pc.command });
@@ -702,8 +824,16 @@ void Printer::doWrite()
 		raiseGCodeEvent(event);
 	}
 
-	boost::asio::async_write(m_serial, boost::asio::buffer(m_commandBuffer.c_str(), m_commandBuffer.length()),
-		std::bind(&Printer::writeDone, this, std::placeholders::_1));
+	if (!m_usingSocket)
+	{
+		boost::asio::async_write(m_serial, boost::asio::buffer(m_commandBuffer.c_str(), m_commandBuffer.length()),
+			std::bind(&Printer::writeDone, this, std::placeholders::_1));
+	}
+	else
+	{
+		boost::asio::async_write(m_socket, boost::asio::buffer(m_commandBuffer.c_str(), m_commandBuffer.length()),
+			std::bind(&Printer::writeDone, this, std::placeholders::_1));
+	}
 
 	// Reset timeout calculation
 	m_lastIncomingData = std::chrono::steady_clock::now();
@@ -744,6 +874,22 @@ void Printer::processCommandEffects(const std::string& line)
 		// Heatbed target temp change
 		if (line.length() > 6 && line[5] == 'S')
 			Printer::processTargetTempSetting("B", line);
+	}
+	else if (m_executingCommand == "G91")
+	{
+		m_positioningState = { true, true };
+	}
+	else if (m_executingCommand == "G90")
+	{
+		m_positioningState = { false, false };
+	}
+	else if (m_executingCommand == "M83")
+	{
+		m_positioningState.extruderRelativePositioning = true;
+	}
+	else if (m_executingCommand == "M82")
+	{
+		m_positioningState.extruderRelativePositioning = false;
 	}
 }
 

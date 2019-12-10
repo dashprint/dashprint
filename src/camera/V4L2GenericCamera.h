@@ -29,6 +29,8 @@ protected:
 	void start();
 	void stop();
 	void run();
+
+	virtual void processFrames(const void* data, size_t length) = 0;
 private:
 	int m_fd;
 	std::unique_ptr<uint8_t[]> m_buffer;
@@ -55,6 +57,7 @@ private:
 	};
 	std::vector<MappedBuffer> m_mappedBuffers;
 	bool m_usingMmap;
+	bool m_stop = false;
 };
 
 #endif

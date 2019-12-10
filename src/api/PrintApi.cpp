@@ -56,7 +56,8 @@ namespace
 				{"width", printer->printArea().width},
 				{"height", printer->printArea().height},
 				{"depth", printer->printArea().depth},
-				{"state", Printer::stateName(printer->state())}
+				{"state", Printer::stateName(printer->state())},
+				{"errorMessage", printer->errorMessage()}
 		};
 	}
 

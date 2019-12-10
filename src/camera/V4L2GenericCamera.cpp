@@ -188,6 +188,7 @@ void V4L2GenericCamera::initDevice(uint32_t pixelFormat)
 
 void V4L2GenericCamera::start()
 {
+	m_stop = false;
 	if (m_usingMmap)
 	{
 		for (size_t i = 0; i < m_mappedBuffers.size(); i++)
@@ -220,6 +221,21 @@ void V4L2GenericCamera::stop()
 
 void V4L2GenericCamera::run()
 {
-	// TODO
+	while (!m_stop)
+	{
+		v4l2_buffer buf;
+		if (m_usingMmap)
+		{
+			// TODO
+		}
+		else
+		{
+			int rv = ::read(m_fd, m_buffer.get(), m_bufferSize);
+			if (rv == -1)
+				throwErrno("read failed");
+			
+			processFrames(m_buffer.get(), rv);
+		}
+	}
 }
 
