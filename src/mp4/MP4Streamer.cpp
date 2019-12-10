@@ -9,7 +9,7 @@
 MP4Streamer::MP4Streamer(std::shared_ptr<H264Source> source, MP4Sink* target)
 : m_source(source), m_target(target)
 {
-	const int bufferSize = 8192*4;
+	const int bufferSize = 8192*12;
 
 	unsigned char* buffer = (unsigned char*) ::av_malloc(bufferSize);
 	m_avioContextIn = ::avio_alloc_context(buffer, bufferSize, 0, this, readPacket, nullptr, nullptr);

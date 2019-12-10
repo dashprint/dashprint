@@ -36,7 +36,7 @@ protected:
 	MMAL_COMPONENT_T* m_encoder = nullptr;
 	MMAL_POOL_T* m_encoderOutputPool = nullptr;
 
-	std::vector<uint8_t> m_buffers[20];
+	std::vector<uint8_t> m_buffers[30];
 	int m_nextBuffer = 0;
 	std::vector<uint8_t> m_sps, m_pps;
 	std::condition_variable m_cv;

@@ -44,7 +44,15 @@ V4L2RawCameraWithMMAL::~V4L2RawCameraWithMMAL()
 
 std::map<std::string, DetectedCamera> V4L2RawCameraWithMMAL::detectCameras()
 {
-	return V4L2GenericCamera::detectCameras(CameraType::RawCamera);
+	auto cams = V4L2GenericCamera::detectCameras(CameraType::RawCamera);
+	for (auto& [key, value] : cams)
+	{
+		value.instantiate = [id = key](){
+			std::string path = "/dev/v4l/by-id/" + id.substr(4);
+			return std::make_shared<V4L2RawCameraWithMMAL>(path.c_str());
+		};
+	}
+	return cams;
 }
 
 void V4L2RawCameraWithMMAL::start()

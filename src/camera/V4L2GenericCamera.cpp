@@ -47,6 +47,7 @@ std::vector<v4l2_fmtdesc> V4L2GenericCamera::getFormats()
 	for (int i = 0;; i++)
 	{
 		v4l2_fmtdesc fmt;
+		fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		fmt.index = i;
 
 		if (::ioctl(m_fd, VIDIOC_ENUM_FMT, &fmt) == -1)
@@ -107,20 +108,19 @@ std::map<std::string, DetectedCamera> V4L2GenericCamera::detectCameras(CameraTyp
 {
 	std::map<std::string, DetectedCamera> rv;
 
-	for (auto& p : boost::filesystem::directory_iterator("/dev"))
+	for (auto& p : boost::filesystem::directory_iterator("/dev/v4l/by-id"))
 	{
 		if (boost::filesystem::is_directory(p))
 			continue;
 		
-		if (boost::starts_with(p.path().filename().generic_string(), "video"))
-		{
-			DetectedCamera camera;
+		DetectedCamera camera;
 
-			BOOST_LOG_TRIVIAL(debug) << "Probing camera at " << p.path().generic_string();
-			
-			if (probeCamera(camera, p.path().generic_string().c_str(), t))
-				rv.emplace(camera.id, std::move(camera));
-		}
+		BOOST_LOG_TRIVIAL(debug) << "Probing camera at " << p.path().generic_string();
+
+		camera.id = "v4l:" + p.path().filename().generic_string();
+		
+		if (probeCamera(camera, p.path().generic_string().c_str(), t))
+			rv.emplace(camera.id, std::move(camera));
 	}
 
 	return rv;

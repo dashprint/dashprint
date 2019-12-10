@@ -167,7 +167,7 @@ void MMALEncoder::processNAL(std::basic_string_view<uint8_t> buffer)
 	{
 		std::unique_lock<std::mutex> l(m_cvMutex);
 
-		// std::cout << "SPS from camera\n";
+		std::cout << "SPS from camera\n";
 		// SPS
 		m_sps.assign(buffer.data(), buffer.data() + buffer.length());
 	}
@@ -183,8 +183,16 @@ void MMALEncoder::processNAL(std::basic_string_view<uint8_t> buffer)
 
 		// Enqueue this as a standard NAL
 		// std::cout << "Writing " << buffer.length() << " into buf " << m_nextBuffer << std::endl;
-		m_buffers[m_nextBuffer].assign(buffer.data(), buffer.data() + buffer.length());
-		m_nextBuffer = (m_nextBuffer + 1) % std::size(m_buffers);
+		size_t done = 0;
+
+		// Part of stability workarounds for RPi 1
+		while (done < buffer.length())
+		{
+			size_t amt = std::min<size_t>(8192*12, buffer.length()-done);
+			m_buffers[m_nextBuffer].assign(buffer.data()+done, buffer.data() + amt + done);
+			m_nextBuffer = (m_nextBuffer + 1) % std::size(m_buffers);
+			done += amt;
+		}
 	}
 
 	m_cv.notify_all();
@@ -198,7 +206,7 @@ void MMALEncoder::setupEncoderFormat()
 	fillEncoderFormat(encoderInputPort->format);
 
 	encoderInputPort->buffer_size = encoderInputPort->buffer_size_recommended;
-	encoderInputPort->buffer_num = 2;
+	encoderInputPort->buffer_num = 4;
 
 	::mmal_format_copy(encoderOutputPort->format, encoderInputPort->format);
 
@@ -213,8 +221,9 @@ void MMALEncoder::setupEncoderFormat()
 	encoderOutputPort->format->encoding = MMAL_ENCODING_H264;
 	encoderOutputPort->format->bitrate = 2000000;
 
-	encoderOutputPort->buffer_size = std::max(encoderOutputPort->buffer_size_recommended, encoderOutputPort->buffer_size_min);
-	encoderOutputPort->buffer_num = std::max(2u, encoderOutputPort->buffer_num_min);
+	// Using twice the recommended size fixes corruption on RPi 1
+	encoderOutputPort->buffer_size = std::max(encoderOutputPort->buffer_size_recommended*2, encoderOutputPort->buffer_size_min);
+	encoderOutputPort->buffer_num = std::max(3u, encoderOutputPort->buffer_num_min);
 
 	status = ::mmal_port_format_commit(encoderOutputPort);
 	if (status != MMAL_SUCCESS)
@@ -253,7 +262,7 @@ public:
 
 			if (camera->m_sps.empty())
 			{
-				std::cout << "Waiting for SPS...\n";
+				// std::cout << "Waiting for SPS...\n";
 				if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return !camera->m_sps.empty() || !camera->isRunning(); }))
 					return 0;
 			}
@@ -264,6 +273,7 @@ public:
 			std::memcpy(buf, camera->m_sps.data(), rd);
 			// m_dump.write((char*) buf, rd);
 
+			// std::cout << this << "Providing " << rd << " bytes of SPS data\n";
 			m_providedSPS = true;
 			return rd;
 		}
@@ -273,7 +283,7 @@ public:
 
 			if (camera->m_pps.empty())
 			{
-				std::cout << "Waiting for PPS...\n";
+				// std::cout << "Waiting for PPS...\n";
 				if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return !camera->m_pps.empty() || !camera->isRunning(); }))
 					return 0;
 			}
@@ -284,6 +294,7 @@ public:
 			std::memcpy(buf, camera->m_pps.data(), rd);
 			// m_dump.write((char*) buf, rd);
 
+			// std::cout << this << "Providing " << rd << " bytes of PPS data\n";
 			m_providedPPS = true;
 			return rd;
 		}
@@ -293,6 +304,7 @@ public:
 
 			if (m_next == camera->m_nextBuffer && m_offset == 0)
 			{
+				// std::cout << this << " Waiting for more data...\n";
 				if (!camera->m_cv.wait_for(l, std::chrono::seconds(10), [&]() { return m_next != camera->m_nextBuffer || !camera->isRunning(); }))
 					return 0;
 			}
@@ -302,7 +314,7 @@ public:
 			int rd = std::min<int>(camera->m_buffers[m_next].size() - m_offset, bufSize);
 			std::memcpy(buf, camera->m_buffers[m_next].data() + m_offset, rd);
 			// m_dump.write((char*) buf, rd);
-			std::cout << "Delivering " << rd << " bytes from buf " << m_next << " of size " << camera->m_buffers[m_next].size() << std::endl;
+			// std::cout << this << " Delivering " << rd << " bytes from buf " << m_next << " of size " << camera->m_buffers[m_next].size() << std::endl;
 
 			if (m_offset + rd >= camera->m_buffers[m_next].size())
 			{
