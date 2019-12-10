@@ -16,6 +16,8 @@ protected:
 	static void throwErrno(const char* message);
 	v4l2_capability getCapability();
 	std::vector<v4l2_fmtdesc> getFormats();
+	v4l2_streamparm getParameters();
+	v4l2_format getFormat();
 
 	enum class CameraType
 	{
@@ -30,7 +32,7 @@ protected:
 	void stop();
 	void run();
 
-	virtual void processFrames(const void* data, size_t length) = 0;
+	virtual void processFrames(const void* data, size_t length) {}
 private:
 	int m_fd;
 	std::unique_ptr<uint8_t[]> m_buffer;

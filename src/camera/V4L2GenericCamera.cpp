@@ -9,6 +9,7 @@
 #include <linux/videodev2.h>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/log/trivial.hpp>
 
 V4L2GenericCamera::V4L2GenericCamera(const char* devicePath)
 {
@@ -68,15 +69,22 @@ bool V4L2GenericCamera::probeCamera(DetectedCamera& c, const char* path, CameraT
 	v4l2_capability caps = cam.getCapability();
 
 	if (!(caps.capabilities & V4L2_CAP_VIDEO_CAPTURE) || (caps.capabilities & V4L2_CAP_TUNER))
+	{
+		BOOST_LOG_TRIVIAL(debug) << "This is not a video capture device";
 		return false;
+	}
 	
 	auto formats = cam.getFormats();
 	bool foundH264 = false, foundRaw = false;
 
 	for (const auto& fmt : formats)
 	{
+		BOOST_LOG_TRIVIAL(debug) << "\tType: 0x" << std::hex << fmt.type << std::dec;
 		if (fmt.type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 			continue;
+
+		BOOST_LOG_TRIVIAL(debug) << "\tPixel format: 0x" << std::hex << fmt.pixelformat << std::dec;
+		BOOST_LOG_TRIVIAL(debug) << "\tFlags: 0x" << std::hex << fmt.flags << std::dec;
 		
 		if (fmt.pixelformat == V4L2_PIX_FMT_H264)
 			foundH264 = true;
@@ -85,7 +93,10 @@ bool V4L2GenericCamera::probeCamera(DetectedCamera& c, const char* path, CameraT
 	}
 
 	if ((t == CameraType::RawCamera && !foundRaw) || (t == CameraType::H264Camera && !foundH264))
+	{
+		BOOST_LOG_TRIVIAL(debug) << "Didn't find supported formats";
 		return false;
+	}
 
 	c.name = reinterpret_cast<const char*>(caps.card);
 
@@ -104,6 +115,8 @@ std::map<std::string, DetectedCamera> V4L2GenericCamera::detectCameras(CameraTyp
 		if (boost::starts_with(p.path().filename().generic_string(), "video"))
 		{
 			DetectedCamera camera;
+
+			BOOST_LOG_TRIVIAL(debug) << "Probing camera at " << p.path().generic_string();
 			
 			if (probeCamera(camera, p.path().generic_string().c_str(), t))
 				rv.emplace(camera.id, std::move(camera));
@@ -113,11 +126,27 @@ std::map<std::string, DetectedCamera> V4L2GenericCamera::detectCameras(CameraTyp
 	return rv;
 }
 
-void V4L2GenericCamera::initDevice(uint32_t pixelFormat)
+v4l2_streamparm V4L2GenericCamera::getParameters()
+{
+	v4l2_streamparm rv;
+	rv.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	if (::ioctl(m_fd, VIDIOC_G_PARM, &rv) != 0)
+		throwErrno("VIDIOC_G_PARM failed");
+	return rv;
+}
+
+v4l2_format V4L2GenericCamera::getFormat()
 {
 	v4l2_format fmt;
-	v4l2_cropcap cropcap = {0};
+	if (::ioctl(m_fd, VIDIOC_G_FMT, &fmt) != 0)
+		throwErrno("VIDIOC_G_FMT failed");
+	return fmt;
+}
 
+void V4L2GenericCamera::initDevice(uint32_t pixelFormat)
+{
+	v4l2_cropcap cropcap = {0};
 	v4l2_capability cap = getCapability();
 
 	cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -131,8 +160,7 @@ void V4L2GenericCamera::initDevice(uint32_t pixelFormat)
 		::ioctl(m_fd, VIDIOC_S_CROP, &crop);
 	}
 
-	if (::ioctl(m_fd, VIDIOC_G_FMT, &fmt) != 0)
-		throwErrno("VIDIOC_G_FMT failed");
+	v4l2_format fmt = getFormat();
 
 	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	fmt.fmt.pix.pixelformat = pixelFormat;
@@ -226,11 +254,20 @@ void V4L2GenericCamera::run()
 		v4l2_buffer buf;
 		if (m_usingMmap)
 		{
-			// TODO
+			buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+			buf.memory = V4L2_MEMORY_MMAP;
+
+			if (::ioctl(m_fd, VIDIOC_DQBUF, &buf) == -1)
+				throwErrno("VIDIOC_DQBUF failed");
+			
+			processFrames(m_mappedBuffers[buf.index].address, buf.bytesused);
+
+			if (::ioctl(m_fd, VIDIOC_QBUF, &buf) == -1)
+				throwErrno("VIDIOC_QBUF failed");
 		}
 		else
 		{
-			int rv = ::read(m_fd, m_buffer.get(), m_bufferSize);
+			int rv =::read(m_fd, m_buffer.get(), m_bufferSize);
 			if (rv == -1)
 				throwErrno("read failed");
 			

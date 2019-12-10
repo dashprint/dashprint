@@ -48,7 +48,6 @@ set(dashprint_sources
     mp4/MP4Streamer.cpp
     camera/Camera.cpp
     camera/V4L2GenericCamera.cpp
-    camera/V4L2RawCamera.cpp
     camera/V4L2H264Camera.cpp
     CameraManager.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/webdata.cpp
@@ -59,7 +58,7 @@ if (WITH_UDEV)
 endif (WITH_UDEV)
 
 if (BCMHOST_FOUND)
-    set(dashprint_sources ${dashprint_sources} camera/MMALCamera.cpp)
+    set(dashprint_sources ${dashprint_sources} camera/MMALCamera.cpp camera/MMALEncoder.cpp camera/V4L2RawCameraWithMMAL.cpp)
 endif (BCMHOST_FOUND)
 
 add_executable(dashprint ${dashprint_sources})
