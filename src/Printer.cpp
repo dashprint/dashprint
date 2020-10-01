@@ -161,6 +161,7 @@ void Printer::reset()
 void Printer::resetCommandQueue()
 {
 	m_replyLines.clear();
+	m_pendingError.clear();
 
 	while (!m_commandQueue.empty())
 	{
@@ -624,6 +625,13 @@ void Printer::readDone(const boost::system::error_code& ec)
 					
 				handleResend(resendLine);
 			}
+			else if (!m_pendingError.empty())
+			{
+				raiseError(m_pendingError);
+
+				doRead();
+				return;
+			}
 			else
 			{
 				if (!m_commandQueue.empty())
@@ -669,7 +677,9 @@ void Printer::readDone(const boost::system::error_code& ec)
 	}
 	else if (boost::starts_with(line, "Error:"))
 	{
-		raiseError(std::string_view(line).substr(6));
+		m_pendingError = line.substr(6);
+		// Don't raise errors if there's a Resend before the following ok
+		// raiseError(std::string_view(line).substr(6));
 	}
 
 	doRead();
@@ -703,6 +713,9 @@ std::string Printer::errorMessage() const
 
 void Printer::handleResend(int resendLine)
 {
+	if (m_nextLineNo == resendLine)
+		return; // Indicates a potential FW bug, but let's carry on
+
 	auto resendStart = m_resendHistory.end();
 	for (auto it = m_resendHistory.begin(); it != m_resendHistory.end(); it++)
 	{

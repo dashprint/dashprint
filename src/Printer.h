@@ -209,6 +209,8 @@ private:
 	PrintArea m_printArea;
 	std::chrono::time_point<std::chrono::steady_clock> m_lastIncomingData;
 	int m_nextLineNo = 1;
+	std::string m_pendingError;
+	
 	// Used in signals as a unique G-Code command ID
 	// So that websocket clients can merge multi-line printer responses easily
 	uint64_t m_nextCommandId = 0;
